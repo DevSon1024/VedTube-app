@@ -26,12 +26,12 @@ This document serves as the absolute source of truth for any AI agent or LLM ass
 
 ## 4. Documentation & Update Tracking
 
-You must actively maintain the project's changelog. After every completed task, error resolution, or feature addition, you must append an entry to the `update_details.md` file.
+You must actively maintain the project's changelog. After every completed task, error resolution, or feature addition, you must append an entry to the `update_details.md` file. (do not erase old entries)
 
 **Format for `update_details.md` entries:**
 
 - **Date**: in format DD/MM/YY (H:M)
-- **issue**: what issue that we are going solve. lenght should be 1-2 lines
+- **Issue**: what issue that we are going solve. lenght should be 1-2 lines
 - **Type of Details:** (e.g., Error Solving, New Update, Refactor, Performance Improvement, More)
 - Do not read the whole file every time; just insert the data at the end with a date and time.
 - **Description:** A brief, clear summary of what was changed, fixed, or added in the recent chat/interaction.

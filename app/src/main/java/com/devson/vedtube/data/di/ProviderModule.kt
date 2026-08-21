@@ -25,4 +25,10 @@ abstract class ProviderModule {
     abstract fun bindYoutubeExtractorDataSource(
         newPipeExtractorDataSource: NewPipeExtractorDataSource
     ): YoutubeExtractorDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaybackResolver(
+        youtubePlaybackResolver: com.devson.vedtube.data.provider.youtube.YoutubePlaybackResolver
+    ): com.devson.vedtube.domain.resolver.PlaybackResolver
 }
