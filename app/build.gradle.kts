@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
@@ -151,9 +152,20 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.androidx.media3.session)
 
-    // Networking - OkHttp
-    implementation(libs.okhttp)
+    // Networking & REST (Retrofit + OkHttp)
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.okhttp.core)
     implementation(libs.okhttp.logging)
+
+    // Serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // HTML Parsing
+    implementation(libs.jsoup)
+
+    // Primary Extractor (NewPipe)
+    implementation(libs.newpipe.extractor)
 
     // Image Loading - Coil
     implementation(libs.coil.compose)
