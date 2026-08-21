@@ -11,10 +11,15 @@ import com.devson.vedtube.core.player.PlayerEvent
 import com.devson.vedtube.core.player.VedPlayer
 import com.devson.vedtube.data.provider.youtube.url.ParsedMediaUrl
 import com.devson.vedtube.data.provider.youtube.url.YoutubeUrlParser
+import com.devson.vedtube.domain.model.AppError
+import com.devson.vedtube.domain.model.ThemeSettings
 import com.devson.vedtube.domain.model.Video
+import com.devson.vedtube.domain.provider.MediaProvider
 import com.devson.vedtube.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +30,22 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 
+private data class SearchState(
+    val query: String = "",
+    val active: Boolean = false,
+    val results: List<Video> = emptyList(),
+    val isSearching: Boolean = false
+)
+
+private data class FeedState(
+    val feed: List<Video> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: AppError? = null
+)
+
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    private val mediaProvider: MediaProvider,
     private val settingsRepository: SettingsRepository,
     private val appInfoDao: AppInfoDao,
     private val okHttpClient: OkHttpClient,
@@ -34,44 +53,198 @@ class HomeViewModel @Inject constructor(
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    val exoPlayer = vedPlayer.exoPlayer
+    private val _searchQuery = MutableStateFlow("")
+    private val _isSearchActive = MutableStateFlow(false)
+    private val _searchResults = MutableStateFlow<List<Video>>(emptyList())
+    private val _feedVideos = MutableStateFlow<List<Video>>(emptyList())
+    private val _isLoadingFeed = MutableStateFlow(false)
+    private val _isSearching = MutableStateFlow(false)
+    private val _error = MutableStateFlow<AppError?>(null)
 
-    private val _infrastructureState = MutableStateFlow(
-        Triple(
-            first = false, // isDatabaseReady
-            second = false, // isNetworkReady
-            third = false  // isPlayerReady
+    private val _infraState = MutableStateFlow(Triple(true, true, true))
+
+    private var searchJob: Job? = null
+
+    private val _searchQueryAndActive = combine(_searchQuery, _isSearchActive) { query, active ->
+        Pair(query, active)
+    }
+
+    private val _searchResultsAndSearching = combine(_searchResults, _isSearching) { results, searching ->
+        Pair(results, searching)
+    }
+
+    private val _searchState = combine(
+        _searchQueryAndActive,
+        _searchResultsAndSearching
+    ) { queryAndActive, resultsAndSearching ->
+        SearchState(
+            query = queryAndActive.first,
+            active = queryAndActive.second,
+            results = resultsAndSearching.first,
+            isSearching = resultsAndSearching.second
         )
-    )
+    }
 
-    private val _parsedMediaState = MutableStateFlow<Pair<String?, ParsedMediaUrl?>>(
-        Pair(null, null)
-    )
+    private val _feedLoadingPair = combine(_feedVideos, _isLoadingFeed) { feed, loading ->
+        Pair(feed, loading)
+    }
+
+    private val _feedState = combine(
+        _feedLoadingPair,
+        _error
+    ) { feedAndLoading, error ->
+        FeedState(
+            feed = feedAndLoading.first,
+            isLoading = feedAndLoading.second,
+            error = error
+        )
+    }
+
+    private val _settingsAndInfra = combine(
+        settingsRepository.themeSettings,
+        _infraState
+    ) { theme, infra ->
+        Pair(theme, infra)
+    }
 
     val uiState: StateFlow<HomeUiState> = combine(
-        settingsRepository.themeSettings,
-        _infrastructureState,
-        _parsedMediaState,
-        vedPlayer.playerState
-    ) { themeSettings, infra, media, playerState ->
+        _settingsAndInfra,
+        _searchState,
+        _feedState
+    ) { settingsAndInfra, searchState, feedState ->
+        val themeSettings = settingsAndInfra.first
+        val infra = settingsAndInfra.second
         HomeUiState(
+            searchQuery = searchState.query,
+            isSearchActive = searchState.active,
+            searchResults = searchState.results,
+            feedVideos = feedState.feed,
+            isLoadingFeed = feedState.isLoading,
+            isSearching = searchState.isSearching,
+            error = feedState.error,
             themeSettings = themeSettings,
             isDatabaseReady = infra.first,
             isNetworkReady = infra.second,
-            isPlayerReady = infra.third,
-            rawIncomingUrl = media.first,
-            parsedMediaUrl = media.second,
-            isLoading = false,
-            playerState = playerState
+            isPlayerReady = infra.third
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState(isLoading = true)
+        initialValue = HomeUiState(isLoadingFeed = true)
     )
 
     init {
         verifyInfrastructure()
+        loadInitialFeed()
+    }
+
+    fun loadInitialFeed() {
+        viewModelScope.launch {
+            _isLoadingFeed.value = true
+            _error.value = null
+            val result = withContext(ioDispatcher) {
+                mediaProvider.search("Trending")
+            }
+            _isLoadingFeed.value = false
+            result.onSuccess { paged ->
+                if (paged.items.isNotEmpty()) {
+                    _feedVideos.value = paged.items
+                } else {
+                    loadFallbackFeed()
+                }
+            }.onFailure { err ->
+                _error.value = (err as? AppError) ?: AppError.Unknown(err.message ?: "Failed to load feed", err)
+                loadFallbackFeed()
+            }
+        }
+    }
+
+    private suspend fun loadFallbackFeed() {
+        if (_feedVideos.value.isEmpty()) {
+            _feedVideos.value = listOf(
+                Video(
+                    id = "aqz-KE-bpKQ",
+                    title = "Big Buck Bunny 60fps 4K",
+                    uploaderName = "Blender Foundation",
+                    thumbnailUrl = "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800",
+                    durationSeconds = 596,
+                    viewCount = 12500000,
+                    uploadDate = "May 2008"
+                ),
+                Video(
+                    id = "dQw4w9WgXcQ",
+                    title = "Rick Astley - Never Gonna Give You Up (Official Music Video)",
+                    uploaderName = "Rick Astley",
+                    thumbnailUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800",
+                    durationSeconds = 213,
+                    viewCount = 1450000000,
+                    uploadDate = "Oct 2009"
+                ),
+                Video(
+                    id = "L_LUpnjgPso",
+                    title = "Elephants Dream (Open Source Cinema)",
+                    uploaderName = "Orange Open Movie",
+                    thumbnailUrl = "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800",
+                    durationSeconds = 654,
+                    viewCount = 4300000,
+                    uploadDate = "Mar 2006"
+                )
+            )
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+        searchJob?.cancel()
+
+        if (query.isBlank()) {
+            _searchResults.value = emptyList()
+            _isSearching.value = false
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(600)
+            executeSearch(query)
+        }
+    }
+
+    fun onSearchSubmitted(query: String) {
+        searchJob?.cancel()
+        if (query.isNotBlank()) {
+            viewModelScope.launch {
+                executeSearch(query)
+            }
+        }
+    }
+
+    private suspend fun executeSearch(query: String) {
+        _isSearching.value = true
+        _error.value = null
+        val result = withContext(ioDispatcher) {
+            mediaProvider.search(query)
+        }
+        _isSearching.value = false
+        result.onSuccess { paged ->
+            _searchResults.value = paged.items
+        }.onFailure { err ->
+            _error.value = (err as? AppError) ?: AppError.Unknown(err.message ?: "Search failed", err)
+        }
+    }
+
+    fun setSearchActive(active: Boolean) {
+        _isSearchActive.value = active
+        if (!active && _searchQuery.value.isBlank()) {
+            _searchResults.value = emptyList()
+            _error.value = null
+        }
+    }
+
+    fun clearSearch() {
+        _searchQuery.value = ""
+        _searchResults.value = emptyList()
+        _isSearching.value = false
+        _error.value = null
     }
 
     fun onPlayerEvent(event: PlayerEvent) {
@@ -83,7 +256,6 @@ class HomeViewModel @Inject constructor(
             val parsed = withContext(ioDispatcher) {
                 YoutubeUrlParser.parse(urlOrText)
             }
-            _parsedMediaState.value = Pair(urlOrText, parsed)
 
             when (parsed) {
                 is ParsedMediaUrl.Video -> {
@@ -92,19 +264,9 @@ class HomeViewModel @Inject constructor(
                         title = "Shared Video (${parsed.videoId})"
                     )
                 }
-                else -> { /* Handle Playlist or Channel in subsequent phases */ }
+                else -> { /* Handle Playlist or Channel */ }
             }
         }
-    }
-
-    fun playSampleVideo(videoId: String, title: String, uploader: String = "Test Creator") {
-        vedPlayer.playVideo(
-            Video(
-                id = videoId,
-                title = title,
-                uploaderName = uploader
-            )
-        )
     }
 
     fun toggleTheme(config: AppThemeConfig) {
@@ -142,7 +304,7 @@ class HomeViewModel @Inject constructor(
 
             val playerReady = true
 
-            _infrastructureState.value = Triple(dbReady, netReady, playerReady)
+            _infraState.value = Triple(dbReady, netReady, playerReady)
         }
     }
 }
