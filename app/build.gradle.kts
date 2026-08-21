@@ -18,13 +18,13 @@ val splitApks = !project.hasProperty("noSplits") && !gradle.startParameter.taskN
 }
 
 android {
-    namespace = "com.devson.androidTemplate"
+    namespace = "com.devson.vedtube"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "com.devson.androidTemplate"
+        applicationId = "com.devson.vedtube"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -58,7 +58,7 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "androidTemplate Beta")
+            resValue("string", "app_name", "VedTube Beta")
         }
 
         release {
@@ -68,7 +68,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            resValue("string", "app_name", "androidTemplate")
+            resValue("string", "app_name", "vedtube")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -89,7 +89,7 @@ android {
         variant.outputs.all {
             val outputImpl = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             val abiName = outputImpl.filters.find { it.filterType == "ABI" }?.identifier ?: "universal"
-            outputFileName = "PixChive-v${variant.versionName}-${abiName}.apk"
+            outputFileName = "VedTube-v${variant.versionName}-${abiName}.apk"
         }
     }
     compileOptions {

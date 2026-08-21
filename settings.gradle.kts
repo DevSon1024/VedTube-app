@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "androidTemplate"
+rootProject.name = "vedtube"
 include(":app")

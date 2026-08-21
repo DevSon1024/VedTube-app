@@ -1,4 +1,4 @@
-package com.devson.androidTemplate.ui.theme
+package com.devson.vedtube.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
