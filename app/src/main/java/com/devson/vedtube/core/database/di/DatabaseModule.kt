@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.devson.vedtube.core.database.VedTubeDatabase
 import com.devson.vedtube.core.database.dao.AppInfoDao
+import com.devson.vedtube.core.database.dao.SubscriptionDao
+import com.devson.vedtube.core.database.dao.WatchHistoryDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,7 +26,9 @@ object DatabaseModule {
             context,
             VedTubeDatabase::class.java,
             "vedtube.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -33,5 +37,21 @@ object DatabaseModule {
         database: VedTubeDatabase
     ): AppInfoDao {
         return database.appInfoDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providesWatchHistoryDao(
+        database: VedTubeDatabase
+    ): WatchHistoryDao {
+        return database.watchHistoryDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providesSubscriptionDao(
+        database: VedTubeDatabase
+    ): SubscriptionDao {
+        return database.subscriptionDao()
     }
 }

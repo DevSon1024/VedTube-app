@@ -13,13 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -40,13 +39,14 @@ import com.devson.vedtube.domain.model.Video
 
 /**
  * Standard YouTube-style Material 3 video card displaying thumbnail, duration badge,
- * channel avatar, title, and metadata.
+ * watch progress bar overlay, channel avatar, title, and metadata.
  */
 @Composable
 fun VideoCard(
     video: Video,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    watchProgressFraction: Float? = null
 ) {
     val context = LocalContext.current
 
@@ -56,7 +56,7 @@ fun VideoCard(
             .clickable(onClick = onClick)
             .padding(bottom = 16.dp)
     ) {
-        // Thumbnail Container with Duration Overlay
+        // Thumbnail Container with Duration Overlay & Watch Progress
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -105,6 +105,19 @@ fun VideoCard(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
+            }
+
+            // Watch Progress Bar Overlay
+            if (watchProgressFraction != null && watchProgressFraction > 0.01f) {
+                LinearProgressIndicator(
+                    progress = { watchProgressFraction.coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.5.dp)
+                        .align(Alignment.BottomCenter),
+                    color = Color.Red,
+                    trackColor = Color.White.copy(alpha = 0.3f)
+                )
             }
         }
 

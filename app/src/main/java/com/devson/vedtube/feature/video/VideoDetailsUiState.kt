@@ -8,5 +8,7 @@ data class VideoDetailsUiState(
     val details: VideoDetails? = null,
     val isLoadingDetails: Boolean = false,
     val error: AppError? = null,
-    val isDescriptionExpanded: Boolean = false
+    val isDescriptionExpanded: Boolean = false,
+    val isSubscribed: Boolean = false,
+    val watchProgressMap: Map<String, Float> = emptyMap()
 )

@@ -12,11 +12,16 @@ import com.devson.vedtube.domain.model.AppError
 import com.devson.vedtube.domain.model.Video
 import com.devson.vedtube.domain.model.VideoDetails
 import com.devson.vedtube.domain.provider.MediaProvider
+import com.devson.vedtube.domain.repository.SubscriptionRepository
+import com.devson.vedtube.domain.repository.WatchHistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,6 +32,8 @@ class VideoDetailsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val mediaProvider: MediaProvider,
     val vedPlayer: VedPlayer,
+    private val subscriptionRepository: SubscriptionRepository,
+    private val watchHistoryRepository: WatchHistoryRepository,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
@@ -34,8 +41,15 @@ class VideoDetailsViewModel @Inject constructor(
     val uiState: StateFlow<VideoDetailsUiState> = _uiState.asStateFlow()
 
     val playerState: StateFlow<PlayerState> = vedPlayer.playerState
+    private var subscriptionObserveJob: Job? = null
 
     init {
+        // Observe watch history progress for related video thumbnails
+        watchHistoryRepository.getRecentHistory().onEach { historyList ->
+            val progressMap = historyList.associate { it.videoId to it.progressFraction }
+            _uiState.update { it.copy(watchProgressMap = progressMap) }
+        }.launchIn(viewModelScope)
+
         val initialVideoId = savedStateHandle.get<String>("videoId")
         if (!initialVideoId.isNullOrBlank()) {
             loadVideo(initialVideoId)
@@ -79,6 +93,7 @@ class VideoDetailsViewModel @Inject constructor(
                         error = null
                     )
                 }
+                observeSubscription(details.uploaderId ?: details.uploaderName)
             }.onFailure { err ->
                 val fallbackDetails = initialVideo?.let { v ->
                     VideoDetails(
@@ -113,6 +128,34 @@ class VideoDetailsViewModel @Inject constructor(
                         } else null
                     )
                 }
+
+                if (fallbackDetails != null) {
+                    observeSubscription(fallbackDetails.uploaderId ?: fallbackDetails.uploaderName)
+                }
+            }
+        }
+    }
+
+    private fun observeSubscription(channelId: String) {
+        subscriptionObserveJob?.cancel()
+        subscriptionObserveJob = subscriptionRepository.isSubscribed(channelId).onEach { isSub ->
+            _uiState.update { it.copy(isSubscribed = isSub) }
+        }.launchIn(viewModelScope)
+    }
+
+    fun toggleSubscription() {
+        val details = _uiState.value.details ?: return
+        val channelId = details.uploaderId ?: details.uploaderName
+        viewModelScope.launch(ioDispatcher) {
+            val isCurrentlySubscribed = subscriptionRepository.isSubscribedSync(channelId)
+            if (isCurrentlySubscribed) {
+                subscriptionRepository.unsubscribe(channelId)
+            } else {
+                subscriptionRepository.subscribe(
+                    channelId = channelId,
+                    channelName = details.uploaderName,
+                    avatarUrl = details.uploaderAvatarUrl ?: ""
+                )
             }
         }
     }

@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.devson.vedtube.domain.repository.WatchHistoryRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -43,6 +44,7 @@ class VedPlayerImpl @Inject constructor(
     private val mediaItemFactory: MediaItemFactory,
     override val queueManager: QueueManager,
     private val playerErrorMapper: PlayerErrorMapper,
+    private val watchHistoryRepository: WatchHistoryRepository,
     @Dispatcher(VedTubeDispatchers.Main) private val mainDispatcher: CoroutineDispatcher,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : VedPlayer {
@@ -57,6 +59,7 @@ class VedPlayerImpl @Inject constructor(
 
     private var activePlaybackSource: PlaybackSource? = null
     private var lastSavedVolume: Float = 1.0f
+    private var lastSavedHistoryTimestamp = 0L
 
     private val exoListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -148,6 +151,7 @@ class VedPlayerImpl @Inject constructor(
     }
 
     override fun pause() {
+        saveCurrentWatchProgress()
         exoPlayer.pause()
     }
 
@@ -325,6 +329,7 @@ class VedPlayerImpl @Inject constructor(
     }
 
     override fun stop() {
+        saveCurrentWatchProgress()
         resolveJob?.cancel()
         stopPositionTicker()
         exoPlayer.stop()
@@ -383,9 +388,19 @@ class VedPlayerImpl @Inject constructor(
                     }
 
                     try {
+                        val savedProgress = withContext(ioDispatcher) {
+                            watchHistoryRepository.getProgress(video.id)
+                        } ?: 0L
+
                         val mediaSource = mediaItemFactory.createMediaSource(source, selectedStream, preferences)
                         exoPlayer.setMediaSource(mediaSource)
                         exoPlayer.prepare()
+
+                        val effectiveDuration = source.durationMs ?: (if (video.durationSeconds > 0) video.durationSeconds * 1000L else 0L)
+                        if (savedProgress > 1000L && (effectiveDuration <= 0L || savedProgress < effectiveDuration * 0.95)) {
+                            exoPlayer.seekTo(savedProgress)
+                        }
+
                         exoPlayer.play()
                     } catch (e: Throwable) {
                         val mappedError = playerErrorMapper.map(e)
@@ -397,6 +412,25 @@ class VedPlayerImpl @Inject constructor(
                     _playerState.update { it.copy(playbackState = PlaybackState.Error(appError)) }
                 }
             )
+        }
+    }
+
+    private fun saveCurrentWatchProgress() {
+        val currentVideo = _playerState.value.currentVideo ?: return
+        val pos = exoPlayer.currentPosition.coerceAtLeast(0L)
+        val dur = exoPlayer.duration.coerceAtLeast(0L).let { if (it > 0) it else currentVideo.durationSeconds * 1000L }
+
+        if (pos > 1000L) {
+            playerScope.launch(ioDispatcher) {
+                watchHistoryRepository.saveProgress(
+                    videoId = currentVideo.id,
+                    title = currentVideo.title,
+                    channelName = currentVideo.uploaderName,
+                    thumbnailUrl = currentVideo.thumbnailUrl ?: "https://i.ytimg.com/vi/${currentVideo.id}/hqdefault.jpg",
+                    durationMs = dur,
+                    progressMs = pos
+                )
+            }
         }
     }
 
@@ -424,6 +458,7 @@ class VedPlayerImpl @Inject constructor(
                 }
             }
             Player.STATE_ENDED -> {
+                saveCurrentWatchProgress()
                 handlePlaybackEnded()
                 PlaybackState.Ended
             }
@@ -472,6 +507,13 @@ class VedPlayerImpl @Inject constructor(
                         bufferedPositionMs = buf
                     )
                 }
+
+                val now = System.currentTimeMillis()
+                if (now - lastSavedHistoryTimestamp >= 5000L) {
+                    lastSavedHistoryTimestamp = now
+                    saveCurrentWatchProgress()
+                }
+
                 delay(250)
             }
         }

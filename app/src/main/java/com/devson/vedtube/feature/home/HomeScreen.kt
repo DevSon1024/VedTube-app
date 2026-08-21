@@ -2,6 +2,7 @@
 
 package com.devson.vedtube.feature.home
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,48 +29,53 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.devson.vedtube.core.player.PlayerEvent
-import androidx.activity.compose.BackHandler
 import com.devson.vedtube.domain.model.Video
 import com.devson.vedtube.feature.common.EmptySearchState
 import com.devson.vedtube.feature.common.ErrorState
 import com.devson.vedtube.feature.common.VideoCard
 import com.devson.vedtube.feature.common.VideoCardShimmer
-
-import androidx.compose.ui.graphics.Color
+import com.devson.vedtube.feature.library.LibraryViewModel
+import com.devson.vedtube.feature.library.ui.LibraryScreen
 import com.devson.vedtube.feature.player.ui.VideoPlayerSurface
 
 @Composable
@@ -77,10 +83,12 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onVideoClick: (Video) -> Unit,
     isInPipMode: Boolean = false,
+    libraryViewModel: LibraryViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerState by viewModel.vedPlayer.playerState.collectAsState()
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
 
     // In PiP mode, display ONLY pure video player if active
     if (isInPipMode && playerState.currentVideo != null) {
@@ -98,40 +106,62 @@ fun HomeScreen(
     }
 
     // Handle system back navigation gracefully on HomeScreen
-    BackHandler(enabled = uiState.isSearchActive || uiState.searchQuery.isNotBlank()) {
+    BackHandler(enabled = selectedTab != 0 || uiState.isSearchActive || uiState.searchQuery.isNotBlank()) {
         if (uiState.isSearchActive) {
             viewModel.setSearchActive(false)
         } else if (uiState.searchQuery.isNotBlank()) {
             viewModel.clearSearch()
+        } else if (selectedTab != 0) {
+            selectedTab = 0
         }
     }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            HomeSearchBar(
-                query = uiState.searchQuery,
-                onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                onSearch = { viewModel.onSearchSubmitted(it) },
-                active = uiState.isSearchActive,
-                onActiveChange = { viewModel.setSearchActive(it) },
-                onClearQuery = { viewModel.clearSearch() }
-            )
+            if (selectedTab == 0) {
+                HomeSearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = { viewModel.onSearchQueryChanged(it) },
+                    onSearch = { viewModel.onSearchSubmitted(it) },
+                    active = uiState.isSearchActive,
+                    onActiveChange = { viewModel.setSearchActive(it) },
+                    onClearQuery = { viewModel.clearSearch() }
+                )
+            }
         },
         bottomBar = {
-            // Persistent Mini Player docked above navigation
-            AnimatedVisibility(
-                visible = playerState.currentVideo != null,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-            ) {
-                playerState.currentVideo?.let { currentVideo ->
-                    HomeMiniPlayer(
-                        video = currentVideo,
-                        isPlaying = playerState.isPlaying,
-                        onPlayPauseClick = { viewModel.onPlayerEvent(PlayerEvent.TogglePlayPause) },
-                        onCloseClick = { viewModel.onPlayerEvent(PlayerEvent.Stop) },
-                        onClick = { onVideoClick(currentVideo) }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Persistent Mini Player docked above navigation
+                AnimatedVisibility(
+                    visible = playerState.currentVideo != null,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                ) {
+                    playerState.currentVideo?.let { currentVideo ->
+                        HomeMiniPlayer(
+                            video = currentVideo,
+                            isPlaying = playerState.isPlaying,
+                            onPlayPauseClick = { viewModel.onPlayerEvent(PlayerEvent.TogglePlayPause) },
+                            onCloseClick = { viewModel.onPlayerEvent(PlayerEvent.Stop) },
+                            onClick = { onVideoClick(currentVideo) }
+                        )
+                    }
+                }
+
+                // Material 3 Bottom Navigation Bar
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                        label = { Text("Home") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        icon = { Icon(Icons.Default.VideoLibrary, contentDescription = "Library") },
+                        label = { Text("Library") }
                     )
                 }
             }
@@ -142,75 +172,80 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                // Category Filter Chips (when not in full search mode)
-                if (!uiState.isSearchActive) {
-                    CategoryFilterRow(
-                        onCategorySelected = { category ->
-                            if (category == "All") {
-                                viewModel.clearSearch()
-                                viewModel.loadInitialFeed()
-                            } else {
-                                viewModel.onSearchQueryChanged(category)
-                                viewModel.onSearchSubmitted(category)
-                            }
-                        }
-                    )
-                }
-
-                // Main Content List
-                when {
-                    uiState.isLoading && uiState.displayVideos.isEmpty() -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(4) {
-                                VideoCardShimmer()
-                            }
-                        }
-                    }
-
-                    uiState.error != null && uiState.displayVideos.isEmpty() -> {
-                        ErrorState(
-                            error = uiState.error,
-                            onRetry = {
-                                if (uiState.isSearchMode) {
-                                    viewModel.onSearchSubmitted(uiState.searchQuery)
-                                } else {
+            if (selectedTab == 0) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Category Filter Chips (when not in full search mode)
+                    if (!uiState.isSearchActive) {
+                        CategoryFilterRow(
+                            onCategorySelected = { category ->
+                                if (category == "All") {
+                                    viewModel.clearSearch()
                                     viewModel.loadInitialFeed()
+                                } else {
+                                    viewModel.onSearchQueryChanged(category)
+                                    viewModel.onSearchSubmitted(category)
                                 }
-                            },
-                            modifier = Modifier.fillMaxSize()
+                            }
                         )
                     }
 
-                    uiState.isSearchMode && !uiState.isLoading && uiState.searchResults.isEmpty() -> {
-                        EmptySearchState(
-                            query = uiState.searchQuery,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    // Main Content Feed or Search Results
+                    when {
+                        uiState.isLoading && uiState.displayVideos.isEmpty() -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                items(5) {
+                                    VideoCardShimmer()
+                                }
+                            }
+                        }
 
-                    else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(
-                                items = uiState.displayVideos,
-                                key = { it.id }
-                            ) { video ->
-                                VideoCard(
-                                    video = video,
-                                    onClick = { onVideoClick(video) }
-                                )
+                        uiState.isSearchActive && uiState.displayVideos.isEmpty() && !uiState.isLoading -> {
+                            EmptySearchState(
+                                query = uiState.searchQuery,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        uiState.error != null && uiState.displayVideos.isEmpty() -> {
+                            ErrorState(
+                                error = uiState.error!!,
+                                onRetry = {
+                                    if (uiState.searchQuery.isNotBlank()) {
+                                        viewModel.onSearchSubmitted(uiState.searchQuery)
+                                    } else {
+                                        viewModel.loadInitialFeed()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                items(
+                                    items = uiState.displayVideos,
+                                    key = { it.id }
+                                ) { video ->
+                                    VideoCard(
+                                        video = video,
+                                        onClick = { onVideoClick(video) }
+                                    )
+                                }
                             }
                         }
                     }
                 }
+            } else {
+                LibraryScreen(
+                    viewModel = libraryViewModel,
+                    onVideoClick = onVideoClick
+                )
             }
         }
     }
@@ -273,42 +308,35 @@ fun HomeSearchBar(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Search suggestions or quick categories inside active search view
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Suggestions",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                listOf("Trending Videos", "Kotlin Coroutines", "Jetpack Compose", "4K Nature", "Lo-Fi Beats").forEach { suggestion ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onQueryChange(suggestion)
-                                onSearch(suggestion)
-                                onActiveChange(false)
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = suggestion,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+            // Live Search Suggestions / Instant Feedback
+            if (query.isNotBlank()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSearch(query)
+                                    onActiveChange(false)
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = query,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
@@ -321,13 +349,15 @@ fun CategoryFilterRow(
     onCategorySelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val categories = listOf("All", "Trending", "Music", "Gaming", "Tech", "News", "Podcasts", "Learning")
+    val categories = listOf("All", "Music", "Gaming", "Podcasts", "News", "Technology", "Live", "Coding")
     var selectedCategory by remember { mutableStateOf("All") }
 
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(categories) { category ->
             val isSelected = category == selectedCategory
@@ -340,13 +370,15 @@ fun CategoryFilterRow(
                 label = {
                     Text(
                         text = category,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
                     )
                 },
                 colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(8.dp)
             )
         }
     }
@@ -364,43 +396,37 @@ fun HomeMiniPlayer(
     val context = LocalContext.current
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 8.dp,
-        shadowElevation = 8.dp,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 8.dp,
+        shadowElevation = 8.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Mini Thumbnail
-            Box(
+            // Thumbnail
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(video.thumbnailUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = video.title,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(width = 56.dp, height = 36.dp)
+                    .size(width = 54.dp, height = 36.dp)
                     .clip(RoundedCornerShape(6.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                if (!video.thumbnailUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(video.thumbnailUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Title & Channel
+            // Title and Channel
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -422,17 +448,23 @@ fun HomeMiniPlayer(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Play / Pause Toggle
-            IconButton(onClick = onPlayPauseClick) {
+            // Play / Pause Action Button
+            IconButton(
+                onClick = onPlayPauseClick,
+                modifier = Modifier.size(36.dp)
+            ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            // Close
-            IconButton(onClick = onCloseClick) {
+            // Close Button
+            IconButton(
+                onClick = onCloseClick,
+                modifier = Modifier.size(36.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Close player",

@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -357,12 +358,36 @@ fun VideoDetailsScreen(
                                 }
                             }
 
-                            FilledTonalButton(
-                                onClick = { /* Subscription placeholder */ },
-                                shape = RoundedCornerShape(20.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                            ) {
-                                Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            if (uiState.isSubscribed) {
+                                Button(
+                                    onClick = { viewModel.toggleSubscription() },
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Subscribed", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                }
+                            } else {
+                                Button(
+                                    onClick = { viewModel.toggleSubscription() },
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                                ) {
+                                    Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                }
                             }
                         }
                     }
@@ -449,6 +474,7 @@ fun VideoDetailsScreen(
                         ) { relatedVideo ->
                             VideoCard(
                                 video = relatedVideo,
+                                watchProgressFraction = uiState.watchProgressMap[relatedVideo.id],
                                 onClick = { viewModel.onRelatedVideoClick(relatedVideo) }
                             )
                         }
