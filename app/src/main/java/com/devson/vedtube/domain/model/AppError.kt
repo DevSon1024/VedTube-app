@@ -39,6 +39,11 @@ sealed class AppError(
         override val cause: Throwable? = null
     ) : AppError(message, cause)
 
+    data class Playback(
+        override val message: String = "A media playback error occurred",
+        override val cause: Throwable? = null
+    ) : AppError(message, cause)
+
     data class Unknown(
         override val message: String = "An unexpected error occurred",
         override val cause: Throwable? = null

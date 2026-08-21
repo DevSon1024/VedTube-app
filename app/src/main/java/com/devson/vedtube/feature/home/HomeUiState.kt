@@ -1,5 +1,6 @@
 package com.devson.vedtube.feature.home
 
+import com.devson.vedtube.core.player.PlayerState
 import com.devson.vedtube.data.provider.youtube.url.ParsedMediaUrl
 import com.devson.vedtube.domain.model.PlaybackSource
 import com.devson.vedtube.domain.model.ThemeSettings
@@ -13,17 +14,5 @@ data class HomeUiState(
     val rawIncomingUrl: String? = null,
     val parsedMediaUrl: ParsedMediaUrl? = null,
     val isLoading: Boolean = false,
-
-    // Real Stream Playback State
-    val isResolvingStream: Boolean = false,
-    val isPlaying: Boolean = false,
-    val isBuffering: Boolean = false,
-    val isCompleted: Boolean = false,
-    val playbackError: String? = null,
-    val resolvedPlaybackSource: PlaybackSource? = null,
-    val activeVideoStream: VideoStream? = null,
-    val currentPositionMs: Long = 0L,
-    val durationMs: Long = 0L,
-    val videoTitle: String? = null,
-    val uploaderName: String? = null
+    val playerState: PlayerState = PlayerState()
 )
