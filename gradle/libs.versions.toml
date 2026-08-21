@@ -19,7 +19,7 @@ okhttp = "4.12.0"
 retrofit = "2.11.0"
 kotlinx-serialization-json = "1.6.3"
 jsoup = "1.17.2"
-newpipe-extractor = "v0.24.2"
+newpipe-extractor = "master-SNAPSHOT"
 coil = "2.7.0"
 coroutines = "1.9.0"
 turbine = "1.2.0"
@@ -43,10 +43,6 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
-
-# Navigation
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 
 # Dependency Injection - Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
@@ -83,7 +79,12 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 # Parsing
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 
-# NewPipe Extractor (Add Jitpack to settings.gradle.kts if required)
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+# Navigation
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+
+# NewPipe Extractor (Jitpack master snapshot)
 newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version.ref = "newpipe-extractor" }
 
 # Image Loading - Coil
