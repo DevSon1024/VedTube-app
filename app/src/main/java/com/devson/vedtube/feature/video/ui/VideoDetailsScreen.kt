@@ -80,6 +80,7 @@ import com.devson.vedtube.feature.video.VideoDetailsViewModel
 fun VideoDetailsScreen(
     viewModel: VideoDetailsViewModel,
     onBackClick: () -> Unit,
+    isInPipMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -90,6 +91,21 @@ fun VideoDetailsScreen(
     val activity = context as? Activity
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // In PiP mode, display ONLY the clean video surface filling the entire PiP window
+    if (isInPipMode) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            VideoPlayerSurface(
+                exoPlayer = viewModel.vedPlayer.exoPlayer,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        return
+    }
 
     // Intercept back navigation when in fullscreen or navigating back
     BackHandler {

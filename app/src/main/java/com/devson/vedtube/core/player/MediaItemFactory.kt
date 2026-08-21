@@ -93,9 +93,12 @@ class MediaItemFactory @Inject constructor(
     }
 
     private fun buildMediaItem(streamUrl: String, playbackSource: PlaybackSource): MediaItem {
+        val artwork = (playbackSource.thumbnailUrl ?: "https://i.ytimg.com/vi/${playbackSource.videoId}/hqdefault.jpg").let { Uri.parse(it) }
         val metadata = MediaMetadata.Builder()
             .setTitle(playbackSource.title)
+            .setDisplayTitle(playbackSource.title)
             .setArtist(playbackSource.uploaderName)
+            .setArtworkUri(artwork)
             .build()
 
         val builder = MediaItem.Builder()

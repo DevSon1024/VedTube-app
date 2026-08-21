@@ -7,6 +7,7 @@ data class PlaybackSource(
     val videoId: String,
     val title: String? = null,
     val uploaderName: String? = null,
+    val thumbnailUrl: String? = null,
     val streams: List<VideoStream> = emptyList(),
     val audioStreams: List<AudioStream> = emptyList(),
     val subtitles: List<SubtitleTrack> = emptyList(),

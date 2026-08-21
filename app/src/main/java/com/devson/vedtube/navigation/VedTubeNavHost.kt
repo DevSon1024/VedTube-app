@@ -18,6 +18,7 @@ import com.devson.vedtube.feature.video.ui.VideoDetailsScreen
 fun VedTubeNavHost(
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel,
+    isInPipMode: Boolean = false,
     navController: NavHostController = rememberNavController(),
     startDestination: String = Screen.Home.route
 ) {
@@ -29,8 +30,8 @@ fun VedTubeNavHost(
         composable(route = Screen.Home.route) {
             HomeScreen(
                 viewModel = homeViewModel,
+                isInPipMode = isInPipMode,
                 onVideoClick = { video ->
-                    // Prevent duplicate navigation events on rapid clicks
                     if (navController.currentDestination?.route == Screen.Home.route) {
                         navController.navigate(Screen.VideoDetails.createRoute(video.id)) {
                             launchSingleTop = true
@@ -51,8 +52,8 @@ fun VedTubeNavHost(
             val videoDetailsViewModel: VideoDetailsViewModel = hiltViewModel(backStackEntry)
             VideoDetailsScreen(
                 viewModel = videoDetailsViewModel,
+                isInPipMode = isInPipMode,
                 onBackClick = {
-                    // Only pop if there is a destination in the backstack to prevent blank screen
                     if (navController.previousBackStackEntry != null) {
                         navController.popBackStack()
                     }

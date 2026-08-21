@@ -69,14 +69,33 @@ import com.devson.vedtube.feature.common.ErrorState
 import com.devson.vedtube.feature.common.VideoCard
 import com.devson.vedtube.feature.common.VideoCardShimmer
 
+import androidx.compose.ui.graphics.Color
+import com.devson.vedtube.feature.player.ui.VideoPlayerSurface
+
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onVideoClick: (Video) -> Unit,
+    isInPipMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playerState by viewModel.vedPlayer.playerState.collectAsState()
+
+    // In PiP mode, display ONLY pure video player if active
+    if (isInPipMode && playerState.currentVideo != null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            VideoPlayerSurface(
+                exoPlayer = viewModel.vedPlayer.exoPlayer,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        return
+    }
 
     // Handle system back navigation gracefully on HomeScreen
     BackHandler(enabled = uiState.isSearchActive || uiState.searchQuery.isNotBlank()) {
