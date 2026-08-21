@@ -1,5 +1,6 @@
 package com.devson.vedtube
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +24,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        processIntent(intent)
+
         setContent {
             val uiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -30,7 +33,36 @@ class MainActivity : ComponentActivity() {
                 appThemeConfig = uiState.themeSettings.themeConfig,
                 dynamicColor = uiState.themeSettings.dynamicColor
             ) {
-                VedTubeNavHost(modifier = Modifier.fillMaxSize())
+                VedTubeNavHost(
+                    homeViewModel = homeViewModel,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        processIntent(intent)
+    }
+
+    private fun processIntent(intent: Intent?) {
+        if (intent == null) return
+
+        when (intent.action) {
+            Intent.ACTION_SEND -> {
+                val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                    ?: intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+                if (!sharedText.isNullOrBlank()) {
+                    homeViewModel.handleIncomingIntent(sharedText)
+                }
+            }
+            Intent.ACTION_VIEW -> {
+                val dataString = intent.dataString
+                if (!dataString.isNullOrBlank()) {
+                    homeViewModel.handleIncomingIntent(dataString)
+                }
             }
         }
     }

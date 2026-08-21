@@ -8,6 +8,8 @@ import com.devson.vedtube.core.common.dispatcher.VedTubeDispatchers
 import com.devson.vedtube.core.database.dao.AppInfoDao
 import com.devson.vedtube.core.database.model.AppInfoEntity
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
+import com.devson.vedtube.data.provider.youtube.url.ParsedMediaUrl
+import com.devson.vedtube.data.provider.youtube.url.YoutubeUrlParser
 import com.devson.vedtube.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,15 +40,22 @@ class HomeViewModel @Inject constructor(
         )
     )
 
+    private val _parsedMediaState = MutableStateFlow<Pair<String?, ParsedMediaUrl?>>(
+        Pair(null, null)
+    )
+
     val uiState: StateFlow<HomeUiState> = combine(
         settingsRepository.themeSettings,
-        _infrastructureState
-    ) { themeSettings, infra ->
+        _infrastructureState,
+        _parsedMediaState
+    ) { themeSettings, infra, media ->
         HomeUiState(
             themeSettings = themeSettings,
             isDatabaseReady = infra.first,
             isNetworkReady = infra.second,
             isPlayerReady = infra.third,
+            rawIncomingUrl = media.first,
+            parsedMediaUrl = media.second,
             isLoading = false
         )
     }.stateIn(
@@ -87,6 +96,12 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun handleIncomingIntent(intentTextOrUrl: String?) {
+        if (intentTextOrUrl.isNullOrBlank()) return
+        val parsed = YoutubeUrlParser.parse(intentTextOrUrl)
+        _parsedMediaState.value = Pair(intentTextOrUrl, parsed)
+    }
+
     fun setThemeConfig(config: AppThemeConfig) {
         viewModelScope.launch {
             settingsRepository.setThemeConfig(config)
@@ -101,7 +116,6 @@ class HomeViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        // Release ExoPlayer instance cleanly if needed
         exoPlayer.release()
     }
 }

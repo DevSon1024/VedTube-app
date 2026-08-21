@@ -9,18 +9,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -30,12 +31,16 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -46,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.devson.vedtube.R
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
+import com.devson.vedtube.data.provider.youtube.url.ParsedMediaUrl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +60,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var inputUrl by remember { mutableStateOf("") }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -67,7 +74,7 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Phase 0 — Project Foundation",
+                            text = "Phase 1 — URL & Deep-Link Engine",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -109,17 +116,150 @@ fun HomeScreen(
                             modifier = Modifier.size(28.dp)
                         )
                         Text(
-                            text = "Foundation Verified",
+                            text = "URL & Deep-Link Engine Active",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                     Text(
-                        text = "Clean Architecture, Hilt DI, Room Database, Preferences DataStore, OkHttp Networking, Media3 Playback & Material 3 Expressive UI configured successfully.",
+                        text = "Supported formats: Videos, Shorts, Live, Embeds, Playlists, Channels, Handles (@), timestamps, and shared text intents.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                }
+            }
+
+            // Ingested Deep Link / Share Intent Card
+            if (uiState.parsedMediaUrl != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Link,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                            Text(
+                                text = "Incoming URL / Deep-Link Parsed",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+
+                        uiState.rawIncomingUrl?.let { raw ->
+                            Text(
+                                text = "Raw: $raw",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+
+                        when (val parsed = uiState.parsedMediaUrl) {
+                            is ParsedMediaUrl.Video -> {
+                                Text(
+                                    text = "Type: VIDEO\nVideo ID: ${parsed.videoId}" +
+                                            (parsed.playlistId?.let { "\nPlaylist ID: $it" } ?: "") +
+                                            (parsed.timestampMs?.let { "\nTimestamp: ${it / 1000}s (${it}ms)" } ?: ""),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            is ParsedMediaUrl.Playlist -> {
+                                Text(
+                                    text = "Type: PLAYLIST\nPlaylist ID: ${parsed.playlistId}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            is ParsedMediaUrl.Channel -> {
+                                val channelDetails = when (parsed) {
+                                    is ParsedMediaUrl.Channel.Id -> "ID: ${parsed.channelId}"
+                                    is ParsedMediaUrl.Channel.Handle -> "Handle: ${parsed.handle}"
+                                    is ParsedMediaUrl.Channel.CustomUrl -> "Custom: ${parsed.customUrl}"
+                                    is ParsedMediaUrl.Channel.User -> "User: ${parsed.username}"
+                                }
+                                Text(
+                                    text = "Type: CHANNEL\n$channelDetails",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            ParsedMediaUrl.Unknown -> {
+                                Text(
+                                    text = "Type: UNKNOWN (Invalid or Unsupported URL)",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            null -> Unit
+                        }
+                    }
+                }
+            }
+
+            // Interactive URL Tester Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Interactive URL Parser Tester",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedTextField(
+                        value = inputUrl,
+                        onValueChange = { inputUrl = it },
+                        label = { Text("Enter YouTube URL or shared text") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = false,
+                        maxLines = 3
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.handleIncomingIntent(inputUrl) },
+                            enabled = inputUrl.isNotBlank()
+                        ) {
+                            Text("Parse URL")
+                        }
+
+                        Button(
+                            onClick = {
+                                inputUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90s"
+                                viewModel.handleIncomingIntent(inputUrl)
+                            }
+                        ) {
+                            Text("Sample Video")
+                        }
+                    }
                 }
             }
 
@@ -141,7 +281,6 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    // Theme selector chips
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -173,7 +312,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // Dynamic color switch
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
