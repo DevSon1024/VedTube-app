@@ -13,9 +13,14 @@ data class PipedStreamResponse(
     val thumbnailUrl: String? = null,
     val hls: String? = null,
     val dash: String? = null,
+    val lbryId: String? = null,
+    val uploaderVerified: Boolean? = null,
     val duration: Long? = null,
     val views: Long? = null,
     val likes: Long? = null,
+    val dislikes: Long? = null,
+    val livestream: Boolean? = null,
+    val proxyUrl: String? = null,
     val audioStreams: List<PipedAudioStream> = emptyList(),
     val videoStreams: List<PipedVideoStream> = emptyList(),
     val subtitles: List<PipedSubtitle> = emptyList()
@@ -25,9 +30,11 @@ data class PipedStreamResponse(
 data class PipedAudioStream(
     val url: String? = null,
     val format: String? = null,
+    val quality: String? = null,
     val bitrate: Int? = null,
     val codec: String? = null,
-    val mimeType: String? = null
+    val mimeType: String? = null,
+    val videoOnly: Boolean? = null
 )
 
 @Serializable

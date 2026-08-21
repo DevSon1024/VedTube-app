@@ -8,6 +8,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import okhttp3.Cache
 import okhttp3.Cookie
@@ -31,6 +32,7 @@ object NetworkModule {
     private const val TIMEOUT_SECONDS = 30L
     private const val PIPED_BASE_URL = "https://pipedapi.kavin.rocks/"
 
+    @OptIn(ExperimentalSerializationApi::class)
     @Provides
     @Singleton
     fun providesJson(): Json {
@@ -39,6 +41,7 @@ object NetworkModule {
             coerceInputValues = true
             isLenient = true
             encodeDefaults = true
+            explicitNulls = false
         }
     }
 
@@ -70,6 +73,13 @@ object NetworkModule {
             .writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .cookieJar(cookieJar)
             .cache(Cache(File(context.cacheDir, "http_cache"), CACHE_SIZE_BYTES))
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Accept-Language", "en-US,en;q=0.9")
+                    .build()
+                chain.proceed(request)
+            }
 
         if (BuildConfig.DEBUG) {
             val loggingInterceptor = HttpLoggingInterceptor().apply {

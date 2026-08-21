@@ -1,38 +1,50 @@
 package com.devson.vedtube.data.provider.youtube
 
+import android.util.Log
 import com.devson.vedtube.core.common.dispatcher.Dispatcher
 import com.devson.vedtube.core.common.dispatcher.VedTubeDispatchers
+import com.devson.vedtube.data.provider.youtube.invidious.InvidiousMapper
+import com.devson.vedtube.data.provider.youtube.invidious.model.InvidiousStreamResponse
 import com.devson.vedtube.data.provider.youtube.piped.PipedApiService
 import com.devson.vedtube.data.provider.youtube.piped.PipedMapper
+import com.devson.vedtube.data.provider.youtube.piped.model.PipedStreamResponse
 import com.devson.vedtube.domain.model.AppError
 import com.devson.vedtube.domain.model.PlaybackPreferences
 import com.devson.vedtube.domain.model.PlaybackSource
 import com.devson.vedtube.domain.resolver.PlaybackResolver
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Concrete implementation of [PlaybackResolver] with dual-engine resilience:
+ * Concrete implementation of [PlaybackResolver] with multi-tier resilience:
  * 1. Primary: Native [NewPipeExtractorDataSource] direct stream extraction.
- * 2. Fallback: Rotating public Piped API instances that immediately returns upon the first 2xx response.
+ * 2. Secondary: Active public Piped API instances with string-level JSON parsing and early return.
+ * 3. Tertiary: Invidious API instances (formatStreams & adaptiveFormats) fallback.
  */
 @Singleton
 class YoutubePlaybackResolver @Inject constructor(
     private val extractorDataSource: YoutubeExtractorDataSource,
     private val pipedApiService: PipedApiService,
+    private val json: Json,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : PlaybackResolver {
 
-    val instances: List<String> = listOf(
-        "https://sh.itjust.works",
-        "https://pipedapi.syncpundit.io",
-        "https://piped-api.garudalinux.org",
-        "https://api.piped.privacydev.net",
-        "https://pipedapi.tokhmi.xyz",
-        "https://piped-api.lunar.icu",
+    val pipedInstances: List<String> = listOf(
+        "https://pipedapi.adminforge.de",
+        "https://pipedapi.moomoo.me",
+        "https://pipedapi.astartes.nl",
+        "https://api.piped.privacy.com.de",
         "https://pipedapi.kavin.rocks"
+    )
+
+    val invidiousInstances: List<String> = listOf(
+        "https://iv.ggtyler.dev",
+        "https://invidious.nerdvpn.de",
+        "https://inv.nadeko.net",
+        "https://invidious.jing.rocks"
     )
 
     override suspend fun resolve(
@@ -47,32 +59,60 @@ class YoutubePlaybackResolver @Inject constructor(
                 return@withContext Result.success(playbackSource)
             }
         } catch (e: Throwable) {
-            // Log/ignore and proceed immediately to Piped instance rotation fallback
+            Log.w("VedTube", "NewPipe direct extractor failed for video: $videoId. Trying Piped fallbacks...", e)
         }
 
-        // 2. Fallback: Rotating Piped instances
-        for (instance in instances) {
+        // 2. Fallback: Rotating Piped API instances
+        for (instance in pipedInstances) {
             try {
                 val cleanBase = instance.trimEnd('/')
                 val fullUrl = "$cleanBase/streams/$videoId"
                 val response = pipedApiService.getStreamInfoFromUrl(fullUrl)
 
                 if (response.isSuccessful && response.body() != null) {
-                    val body = response.body()!!
-                    // 1. Map the body to your PlaybackSource domain model
-                    val playbackSource = PipedMapper.map(body, videoId)
+                    val responseBodyString = response.body()!!.string()
 
-                    // 2. RETURN IMMEDIATELY. DO NOT CONTINUE THE LOOP!
-                    return@withContext Result.success(playbackSource)
+                    // Strict JSON decoding - safely catches plain text or HTML errors
+                    val pipedResponse = json.decodeFromString<PipedStreamResponse>(responseBodyString)
+                    val playbackSource = PipedMapper.map(pipedResponse, videoId)
+
+                    if (hasPlayableContent(playbackSource)) {
+                        // RETURN IMMEDIATELY. DO NOT CONTINUE THE LOOP!
+                        return@withContext Result.success(playbackSource)
+                    }
                 }
             } catch (e: Exception) {
-                // Ignore the exception and let the loop try the next instance
+                Log.e("VedTube", "Failed to parse Piped stream from $instance: ${e.message}", e)
+                continue
+            }
+        }
+
+        // 3. Fallback: Rotating Invidious API instances
+        for (instance in invidiousInstances) {
+            try {
+                val cleanBase = instance.trimEnd('/')
+                val fullUrl = "$cleanBase/api/v1/videos/$videoId"
+                val response = pipedApiService.getStreamInfoFromUrl(fullUrl)
+
+                if (response.isSuccessful && response.body() != null) {
+                    val responseBodyString = response.body()!!.string()
+
+                    val invidiousResponse = json.decodeFromString<InvidiousStreamResponse>(responseBodyString)
+                    val playbackSource = InvidiousMapper.map(invidiousResponse, videoId)
+
+                    if (hasPlayableContent(playbackSource)) {
+                        // RETURN IMMEDIATELY. DO NOT CONTINUE THE LOOP!
+                        return@withContext Result.success(playbackSource)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("VedTube", "Failed to parse Invidious stream from $instance: ${e.message}", e)
                 continue
             }
         }
 
         Result.failure(
-            AppError.ContentUnavailable("All Piped instances failed to resolve the stream for video: $videoId")
+            AppError.ContentUnavailable("All extraction providers (NewPipe, Piped, Invidious) failed for video: $videoId")
         )
     }
 

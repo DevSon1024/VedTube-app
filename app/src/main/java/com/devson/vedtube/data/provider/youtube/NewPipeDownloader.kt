@@ -21,7 +21,7 @@ class NewPipeDownloader @Inject constructor(
 ) : Downloader() {
 
     private val defaultUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
 
     @Throws(IOException::class, ReCaptchaException::class)
     override fun execute(request: Request): Response {
@@ -34,9 +34,13 @@ class NewPipeDownloader @Inject constructor(
             .url(url)
 
         var hasUserAgent = false
+        var hasAcceptLanguage = false
         headers.forEach { (key, values) ->
             if (key.equals("User-Agent", ignoreCase = true)) {
                 hasUserAgent = true
+            }
+            if (key.equals("Accept-Language", ignoreCase = true)) {
+                hasAcceptLanguage = true
             }
             values.forEach { value ->
                 requestBuilder.addHeader(key, value)
@@ -46,12 +50,23 @@ class NewPipeDownloader @Inject constructor(
         if (!hasUserAgent) {
             requestBuilder.header("User-Agent", defaultUserAgent)
         }
+        if (!hasAcceptLanguage) {
+            requestBuilder.header("Accept-Language", "en-US,en;q=0.9")
+        }
 
         if (url.contains("youtube.com") || url.contains("googlevideo.com")) {
             requestBuilder.header("Origin", "https://www.youtube.com")
             requestBuilder.header("Referer", "https://www.youtube.com/")
             requestBuilder.header("Sec-Fetch-Mode", "navigate")
             requestBuilder.header("Sec-Fetch-Site", "cross-site")
+            requestBuilder.header("Sec-Fetch-Dest", "document")
+            requestBuilder.header("Sec-Ch-Ua", "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Google Chrome\";v=\"114\"")
+            requestBuilder.header("Sec-Ch-Ua-Mobile", "?0")
+            requestBuilder.header("Sec-Ch-Ua-Platform", "\"Windows\"")
+            // Prevent YouTube consent splash/reload page
+            if (headers["Cookie"] == null) {
+                requestBuilder.header("Cookie", "SOCS=CAI; PREF=tz=UTC&hl=en; CONSENT=PENDING+999")
+            }
         }
 
         if (httpMethod.equals("POST", ignoreCase = true) ||

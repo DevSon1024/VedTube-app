@@ -3,6 +3,8 @@ package com.devson.vedtube.data.provider.youtube
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
+import org.schabi.newpipe.extractor.localization.ContentCountry
+import org.schabi.newpipe.extractor.localization.Localization
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.search.SearchInfo
 import org.schabi.newpipe.extractor.stream.StreamInfo
@@ -11,6 +13,7 @@ import javax.inject.Singleton
 
 /**
  * Concrete implementation of [YoutubeExtractorDataSource] backed by NewPipeExtractor.
+ * Initialized with default localization and content country to prevent reload challenge blocks.
  */
 @Singleton
 class NewPipeExtractorDataSource @Inject constructor(
@@ -18,7 +21,7 @@ class NewPipeExtractorDataSource @Inject constructor(
 ) : YoutubeExtractorDataSource {
 
     init {
-        NewPipe.init(downloader)
+        NewPipe.init(downloader, Localization.DEFAULT, ContentCountry.DEFAULT)
     }
 
     override suspend fun extractStreamInfo(videoId: String): StreamInfo {
