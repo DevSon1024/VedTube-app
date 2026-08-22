@@ -54,4 +54,12 @@ object DatabaseModule {
     ): SubscriptionDao {
         return database.subscriptionDao()
     }
+
+    @Provides
+    @Singleton
+    fun providesDownloadDao(
+        database: VedTubeDatabase
+    ): com.devson.vedtube.core.database.dao.DownloadDao {
+        return database.downloadDao()
+    }
 }

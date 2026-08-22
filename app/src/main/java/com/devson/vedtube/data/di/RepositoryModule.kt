@@ -33,4 +33,10 @@ abstract class RepositoryModule {
     abstract fun bindSubscriptionRepository(
         subscriptionRepositoryImpl: SubscriptionRepositoryImpl
     ): SubscriptionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDownloadRepository(
+        downloadRepositoryImpl: com.devson.vedtube.data.repository.DownloadRepositoryImpl
+    ): com.devson.vedtube.domain.repository.DownloadRepository
 }

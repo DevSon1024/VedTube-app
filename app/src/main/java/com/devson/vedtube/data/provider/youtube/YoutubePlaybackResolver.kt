@@ -34,6 +34,7 @@ class YoutubePlaybackResolver @Inject constructor(
     private val extractorDataSource: YoutubeExtractorDataSource,
     private val cobaltApiService: CobaltApiService,
     private val pipedApiService: PipedApiService,
+    private val downloadDao: com.devson.vedtube.core.database.dao.DownloadDao,
     private val json: Json,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : PlaybackResolver {
@@ -64,6 +65,35 @@ class YoutubePlaybackResolver @Inject constructor(
         videoId: String,
         preferences: PlaybackPreferences
     ): Result<PlaybackSource> = withContext(ioDispatcher) {
+        // 0. Offline Interception: Check if downloaded file is completed and exists on disk
+        try {
+            val download = downloadDao.getDownloadSync(videoId)
+            if (download != null && download.status == com.devson.vedtube.core.database.model.DownloadStatus.COMPLETED) {
+                val localFile = java.io.File(download.localFilePath)
+                if (localFile.exists() && localFile.length() > 0L) {
+                    Log.i("VedTube", "Intercepted offline playback for video: $videoId from ${localFile.absolutePath}")
+                    val offlineStream = com.devson.vedtube.domain.model.VideoStream(
+                        url = localFile.toURI().toString(),
+                        resolution = download.quality.ifBlank { "720p" },
+                        width = 1280,
+                        height = 720,
+                        bitrate = 0,
+                        fps = 30,
+                        format = "mp4"
+                    )
+                    val offlineSource = PlaybackSource(
+                        videoId = videoId,
+                        title = download.title,
+                        streams = listOf(offlineStream),
+                        durationMs = 0L
+                    )
+                    return@withContext Result.success(offlineSource)
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("VedTube", "Failed to check local download for $videoId: ${e.message}")
+        }
+
         val watchUrl = "https://www.youtube.com/watch?v=$videoId"
 
         // 1. Primary: Native NewPipeExtractor

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.devson.vedtube.feature.video.ui
 
 import android.app.Activity
@@ -7,6 +9,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -358,35 +364,102 @@ fun VideoDetailsScreen(
                                 }
                             }
 
-                            if (uiState.isSubscribed) {
-                                Button(
-                                    onClick = { viewModel.toggleSubscription() },
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                    ),
-                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Subscribed", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Subscribe Button
+                                if (uiState.isSubscribed) {
+                                    Button(
+                                        onClick = { viewModel.toggleSubscription() },
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Subscribed", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = { viewModel.toggleSubscription() },
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary,
+                                            contentColor = MaterialTheme.colorScheme.onPrimary
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    }
                                 }
-                            } else {
-                                Button(
-                                    onClick = { viewModel.toggleSubscription() },
-                                    shape = RoundedCornerShape(20.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                                ) {
-                                    Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                // Download Action Button
+                                val downloadItem = uiState.downloadItem
+                                when {
+                                    downloadItem != null && downloadItem.isCompleted -> {
+                                        FilledTonalButton(
+                                            onClick = { /* Already downloaded */ },
+                                            shape = RoundedCornerShape(20.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Downloaded",
+                                                modifier = Modifier.size(16.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Downloaded", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    downloadItem != null && downloadItem.isDownloading -> {
+                                        FilledTonalButton(
+                                            onClick = { /* In progress */ },
+                                            shape = RoundedCornerShape(20.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            CircularProgressIndicator(
+                                                progress = { downloadItem.progressFraction },
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("${downloadItem.progress}%", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    else -> {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.onDownloadClick() },
+                                            enabled = !uiState.isLoadingDownloadStreams,
+                                            shape = RoundedCornerShape(20.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            if (uiState.isLoadingDownloadStreams) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(16.dp),
+                                                    strokeWidth = 2.dp
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.Download,
+                                                    contentDescription = "Download",
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Download", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -468,10 +541,10 @@ fun VideoDetailsScreen(
                     // Related Videos List
                     val related = uiState.details?.relatedVideos.orEmpty()
                     if (related.isNotEmpty()) {
-                        items(
+                        itemsIndexed(
                             items = related,
-                            key = { it.id }
-                        ) { relatedVideo ->
+                            key = { index, relatedVideo -> "related_${relatedVideo.id}_$index" }
+                        ) { _, relatedVideo ->
                             VideoCard(
                                 video = relatedVideo,
                                 watchProgressFraction = uiState.watchProgressMap[relatedVideo.id],
@@ -492,6 +565,60 @@ fun VideoDetailsScreen(
                             )
                         }
                     }
+                }
+            }
+        }
+
+        // Quality selection bottom sheet for downloading
+        if (uiState.isDownloadQualitySheetVisible) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.dismissDownloadQualitySheet() }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                ) {
+                    Text(
+                        text = "Download Quality",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    uiState.availableDownloadStreams.forEach { stream ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { viewModel.onSelectDownloadQuality(stream) }
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = stream.resolution,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "${(stream.format ?: "mp4").uppercase()} • Progressive",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }

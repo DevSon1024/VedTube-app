@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FileDownloadDone
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material3.AlertDialog
@@ -29,7 +31,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -51,8 +55,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.devson.vedtube.domain.model.ChannelSubscription
+import com.devson.vedtube.domain.model.DownloadItem
 import com.devson.vedtube.domain.model.Video
-import com.devson.vedtube.domain.model.WatchHistoryItem
 import com.devson.vedtube.feature.common.VideoCard
 import com.devson.vedtube.feature.library.LibraryViewModel
 
@@ -143,11 +147,101 @@ fun LibraryScreen(
                 ) {
                     items(
                         items = uiState.subscriptionsList,
-                        key = { it.channelId }
+                        key = { "sub_${it.channelId}" }
                     ) { sub ->
                         SubscriptionAvatarItem(
                             subscription = sub,
                             onUnsubscribe = { viewModel.unsubscribe(sub.channelId) }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Downloads Section
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Downloads",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (uiState.downloadsList.isNotEmpty()) {
+                    Text(
+                        text = "${uiState.downloadsList.size}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        if (uiState.downloadsList.isNotEmpty()) {
+            items(
+                items = uiState.downloadsList,
+                key = { "download_${it.videoId}" }
+            ) { downloadItem ->
+                DownloadListItem(
+                    downloadItem = downloadItem,
+                    onClick = {
+                        val video = Video(
+                            id = downloadItem.videoId,
+                            title = downloadItem.title,
+                            uploaderName = downloadItem.channelName,
+                            thumbnailUrl = downloadItem.thumbnailUrl
+                        )
+                        onVideoClick(video)
+                    },
+                    onDelete = { viewModel.deleteDownload(downloadItem.videoId) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        } else {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "No downloads. Tap Download on any video for offline viewing.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -194,7 +288,7 @@ fun LibraryScreen(
         if (uiState.historyList.isNotEmpty()) {
             items(
                 items = uiState.historyList,
-                key = { it.videoId }
+                key = { "history_${it.videoId}" }
             ) { historyItem ->
                 val video = Video(
                     id = historyItem.videoId,
@@ -231,7 +325,7 @@ fun LibraryScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 32.dp),
+                        .padding(vertical = 16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     ),
@@ -264,6 +358,94 @@ fun LibraryScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadListItem(
+    downloadItem: DownloadItem,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val context = LocalContext.current
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(downloadItem.thumbnailUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = downloadItem.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(width = 80.dp, height = 50.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = downloadItem.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "${downloadItem.channelName} • ${downloadItem.quality}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (downloadItem.isDownloading) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Downloading ${downloadItem.progress}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete download",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            if (downloadItem.isDownloading) {
+                LinearProgressIndicator(
+                    progress = { downloadItem.progressFraction },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
     }

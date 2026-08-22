@@ -121,6 +121,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Jetpack Compose & Material 3
     implementation(platform(libs.androidx.compose.bom))
