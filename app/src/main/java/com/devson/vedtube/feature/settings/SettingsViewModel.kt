@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.devson.vedtube.core.common.dispatcher.Dispatcher
 import com.devson.vedtube.core.common.dispatcher.VedTubeDispatchers
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
+import com.devson.vedtube.domain.model.BackupSummary
+import com.devson.vedtube.domain.model.ThemeSettings
+import com.devson.vedtube.domain.model.UserProfile
 import com.devson.vedtube.domain.repository.DataManagementRepository
 import com.devson.vedtube.domain.repository.SettingsRepository
 import com.devson.vedtube.domain.repository.UserProfileRepository
@@ -37,27 +40,31 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.themeSettings,
             settingsRepository.sponsorBlockEnabled,
             settingsRepository.skipIntervalSeconds,
-            settingsRepository.distractionFreeMode
-        ) { theme, sponsorBlock, skipInterval, distractionFree ->
-            ThemeAndPlaybackConfig(theme, sponsorBlock, skipInterval, distractionFree)
+            settingsRepository.distractionFreeMode,
+            settingsRepository.contentRegion
+        ) { theme, sponsorBlock, skipInterval, distractionFree, region ->
+            ThemeAndPlaybackConfig(theme, sponsorBlock, skipInterval, distractionFree, region)
         },
         combine(
+            settingsRepository.appLanguage,
             userProfileRepository.allProfiles,
             userProfileRepository.activeProfileId,
             userProfileRepository.activeProfile
-        ) { profiles, activeId, activeProf ->
-            ProfileConfig(profiles, activeId, activeProf)
+        ) { language, profiles, activeId, activeProf ->
+            ProfileAndLanguageConfig(language, profiles, activeId, activeProf)
         },
         _exportImportState
-    ) { playbackConfig, profileConfig, customState ->
+    ) { playbackConfig, profileAndLangConfig, customState ->
         customState.copy(
             themeSettings = playbackConfig.theme,
             isSponsorBlockEnabled = playbackConfig.sponsorBlock,
             skipIntervalSeconds = playbackConfig.skipInterval,
             isDistractionFreeMode = playbackConfig.distractionFree,
-            profiles = profileConfig.profiles,
-            activeProfileId = profileConfig.activeId,
-            activeProfile = profileConfig.activeProfile
+            contentRegion = playbackConfig.region,
+            appLanguage = profileAndLangConfig.language,
+            profiles = profileAndLangConfig.profiles,
+            activeProfileId = profileAndLangConfig.activeId,
+            activeProfile = profileAndLangConfig.activeProfile
         )
     }.stateIn(
         scope = viewModelScope,
@@ -92,6 +99,18 @@ class SettingsViewModel @Inject constructor(
     fun setDistractionFreeMode(enabled: Boolean) {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.setDistractionFreeMode(enabled)
+        }
+    }
+
+    fun setContentRegion(region: String) {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setContentRegion(region)
+        }
+    }
+
+    fun setAppLanguage(languageCode: String) {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setAppLanguage(languageCode)
         }
     }
 
@@ -207,15 +226,17 @@ class SettingsViewModel @Inject constructor(
     }
 
     private data class ThemeAndPlaybackConfig(
-        val theme: com.devson.vedtube.domain.model.ThemeSettings,
+        val theme: ThemeSettings,
         val sponsorBlock: Boolean,
         val skipInterval: Int,
-        val distractionFree: Boolean
+        val distractionFree: Boolean,
+        val region: String
     )
 
-    private data class ProfileConfig(
-        val profiles: List<com.devson.vedtube.domain.model.UserProfile>,
+    private data class ProfileAndLanguageConfig(
+        val language: String,
+        val profiles: List<UserProfile>,
         val activeId: String,
-        val activeProfile: com.devson.vedtube.domain.model.UserProfile?
+        val activeProfile: UserProfile?
     )
 }

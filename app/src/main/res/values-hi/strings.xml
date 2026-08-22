@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">वेदट्यूब</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">होम</string>
+    <string name="nav_library">लाइब्रेरी</string>
+    <string name="nav_settings">सेटिंग्स</string>
+
+    <!-- Home & Search -->
+    <string name="search_placeholder">वेदट्यूब पर खोजें...</string>
+    <string name="trending_title">ट्रेंडिंग</string>
+    <string name="recent_searches">हाल की खोजें</string>
+    <string name="clear_all">सभी हटाएं</string>
+    <string name="no_results">कोई परिणाम नहीं मिला</string>
+
+    <!-- Common Actions -->
+    <string name="cancel">रद्द करें</string>
+    <string name="delete">हटाएं</string>
+    <string name="confirm">पुष्टि करें</string>
+    <string name="save">सहेजें</string>
+    <string name="create">बनाएं</string>
+    <string name="retry">पुनः प्रयास करें</string>
+    <string name="close">बंद करें</string>
+    <string name="clear">हटाएं</string>
+    <string name="more">...और अधिक</string>
+
+    <!-- Video Details & Player -->
+    <string name="subscribe">सदस्यता लें</string>
+    <string name="subscribed">सदस्यता ली</string>
+    <string name="download">डाउनलोड</string>
+    <string name="downloaded">डाउनलोड हो गया</string>
+    <string name="downloading">डाउनलोड हो रहा है</string>
+    <string name="save_to_playlist">सहेजें</string>
+    <string name="saved_to_playlist">सहेजा गया</string>
+    <string name="description_title">विवरण</string>
+    <string name="comments_title">टिप्पणियाँ</string>
+    <string name="related_videos_title">संबंधित वीडियो</string>
+    <string name="loading_comments">टिप्पणियाँ लोड हो रही हैं...</string>
+    <string name="no_comments">कोई टिप्पणी उपलब्ध नहीं है</string>
+    <string name="like">पसंद</string>
+    <string name="likes">पसंद</string>
+    <string name="dislikes">नापसंद</string>
+
+    <!-- Player Fit & Controls -->
+    <string name="fit_mode">फिट मोड</string>
+    <string name="fit_fit">फिट</string>
+    <string name="fit_fill">भरें</string>
+    <string name="fit_zoom">ज़ूम</string>
+    <string name="skip_seconds_forward">+%1$d सेकंड</string>
+    <string name="skip_seconds_backward">-%1$d सेकंड</string>
+    <string name="sponsor_skipped">प्रायोजित भाग छोड़ दिया गया</string>
+    <string name="distraction_free_active">एकाग्रता मोड सक्रिय</string>
+    <string name="distraction_free_desc">टिप्पणियाँ और सुझाव छिपा दिए गए हैं</string>
+
+    <!-- Library & Offline -->
+    <string name="library_title">लाइब्रेरी</string>
+    <string name="watch_history_title">इतिहास</string>
+    <string name="subscriptions_title">सदस्यताएँ</string>
+    <string name="playlists_title">प्लेलिस्ट</string>
+    <string name="downloads_title">डाउनलोड</string>
+    <string name="new_playlist_title">नई प्लेलिस्ट</string>
+    <string name="playlist_name_label">प्लेलिस्ट का नाम</string>
+    <string name="playlist_name_hint">उदा. संगीत, ट्यूटोरियल</string>
+    <string name="clear_history_dialog_title">इतिहास साफ़ करें?</string>
+    <string name="clear_history_dialog_desc">यह आपके स्थानीय देखे गए इतिहास से सभी वीडियो हटा देगा।</string>
+    <string name="delete_playlist_dialog_title">प्लेलिस्ट हटाएं?</string>
+    <string name="delete_playlist_dialog_desc">क्या आप वाकई इस प्लेलिस्ट को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।</string>
+
+    <!-- Empty States -->
+    <string name="empty_library_title">आपकी लाइब्रेरी खाली है</string>
+    <string name="empty_library_desc">वीडियो देखें, चैनलों की सदस्यता लें या यहाँ देखने के लिए सामग्री डाउनलोड करें।</string>
+    <string name="empty_history_title">कोई इतिहास नहीं है</string>
+    <string name="empty_history_desc">आपके द्वारा देखे गए वीडियो यहाँ दिखाई देंगे।</string>
+    <string name="empty_subscriptions_title">कोई सदस्यता नहीं है</string>
+    <string name="empty_subscriptions_desc">अपने पसंदीदा रचनाकारों को यहाँ देखने के लिए उनकी सदस्यता लें।</string>
+    <string name="empty_playlists_title">कोई प्लेलिस्ट नहीं है</string>
+    <string name="empty_playlists_desc">अपने पसंदीदा वीडियो व्यवस्थित करने के लिए प्लेलिस्ट बनाएं।</string>
+    <string name="empty_downloads_title">कोई डाउनलोड नहीं है</string>
+    <string name="empty_downloads_desc">कभी भी, कहीं भी ऑफ़लाइन देखने के लिए वीडियो डाउनलोड करें।</string>
+    <string name="btn_explore_trending">ट्रेंडिंग देखें</string>
+    <string name="btn_search_videos">वीडियो खोजें</string>
+
+    <!-- Settings -->
+    <string name="settings_title">सेटिंग्स</string>
+    <string name="section_appearance">दिखावट</string>
+    <string name="theme_title">थीम</string>
+    <string name="theme_system">सिस्टम अनुसार</string>
+    <string name="theme_light">लाइट</string>
+    <string name="theme_dark">डार्क</string>
+    <string name="dynamic_color_title">डायनामिक रंग</string>
+    <string name="dynamic_color_desc">डिवाइस वॉलपेपर के साथ ऐप के रंग मिलाएं (Material You)</string>
+
+    <string name="section_localization">भाषा और क्षेत्र</string>
+    <string name="app_language_title">ऐप की भाषा</string>
+    <string name="app_language_system">सिस्टम डिफ़ॉल्ट</string>
+    <string name="content_region_title">सामग्री क्षेत्र</string>
+    <string name="content_region_desc">ट्रेंडिंग सामग्री इस क्षेत्र के अनुसार तैयार की जाएगी</string>
+
+    <string name="section_player">प्लेयर और सामग्री</string>
+    <string name="skip_interval_title">डबल-टैप स्किप अंतराल</string>
+    <string name="distraction_free_mode_title">एकाग्रता मोड</string>
+    <string name="distraction_free_mode_desc">टिप्पणियाँ और संबंधित वीडियो छिपाएं</string>
+    <string name="sponsorblock_title">स्पॉन्सरब्लॉक</string>
+    <string name="sponsorblock_desc">वीडियो में प्रायोजित भागों को स्वचालित रूप से छोड़ें</string>
+
+    <string name="section_profile">उपयोगकर्ता प्रोफ़ाइल</string>
+    <string name="profile_active_label">सक्रिय प्रोफ़ाइल</string>
+    <string name="profile_switch_title">प्रोफ़ाइल बदलें</string>
+    <string name="profile_new_title">प्रोफ़ाइल बनाएं</string>
+    <string name="profile_name_label">प्रोफ़ाइल का नाम</string>
+    <string name="profile_delete_dialog_title">प्रोफ़ाइल हटाएं?</string>
+    <string name="profile_delete_dialog_desc">इस प्रोफ़ाइल का सारा इतिहास, सदस्यताएँ और प्लेलिस्ट हटा दी जाएंगी।</string>
+
+    <string name="section_data">डेटा और बैकअप</string>
+    <string name="export_data_title">डेटा निर्यात करें</string>
+    <string name="export_data_desc">इतिहास, सदस्यताएँ, प्लेलिस्ट और खोजों का बैकअप लें</string>
+    <string name="import_data_title">डेटा आयात करें</string>
+    <string name="import_data_desc">पहले निर्यात की गई बैकअप फ़ाइल से अपना डेटा पुनर्स्थापित करें</string>
+    <string name="clear_data_title">सभी स्थानीय डेटा मिटाएं</string>
+    <string name="clear_data_desc">सभी इतिहास, सदस्यताएँ, प्लेलिस्ट और खोज मिटा दें</string>
+    <string name="clear_data_warning">क्या आप वाकई सारा डेटा मिटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।</string>
+</resources>

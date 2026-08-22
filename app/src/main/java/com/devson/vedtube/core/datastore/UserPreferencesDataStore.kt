@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
 import com.devson.vedtube.domain.model.ThemeSettings
@@ -24,9 +25,11 @@ class UserPreferencesDataStore @Inject constructor(
         val THEME_CONFIG = stringPreferencesKey("theme_config")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val SPONSORBLOCK_ENABLED = booleanPreferencesKey("sponsorblock_enabled")
-        val SKIP_INTERVAL_SECONDS = androidx.datastore.preferences.core.intPreferencesKey("skip_interval_seconds")
+        val SKIP_INTERVAL_SECONDS = intPreferencesKey("skip_interval_seconds")
         val DISTRACTION_FREE_MODE = booleanPreferencesKey("distraction_free_mode")
         val ACTIVE_PROFILE_ID = stringPreferencesKey("active_profile_id")
+        val CONTENT_REGION = stringPreferencesKey("content_region")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
     }
 
     val themeSettings: Flow<ThemeSettings> = dataStore.data
@@ -99,6 +102,30 @@ class UserPreferencesDataStore @Inject constructor(
             preferences[PreferencesKeys.ACTIVE_PROFILE_ID] ?: "profile_default"
         }
 
+    val contentRegion: Flow<String> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.CONTENT_REGION] ?: "IN"
+        }
+
+    val appLanguage: Flow<String> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.APP_LANGUAGE] ?: "system"
+        }
+
     suspend fun setThemeConfig(themeConfig: AppThemeConfig) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_CONFIG] = themeConfig.name
@@ -132,6 +159,18 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setActiveProfileId(profileId: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.ACTIVE_PROFILE_ID] = profileId
+        }
+    }
+
+    suspend fun setContentRegion(region: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.CONTENT_REGION] = region.uppercase()
+        }
+    }
+
+    suspend fun setAppLanguage(languageCode: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.APP_LANGUAGE] = languageCode.lowercase()
         }
     }
 }

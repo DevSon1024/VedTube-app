@@ -34,6 +34,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override val activeProfileId: Flow<String>
         get() = userPreferencesDataStore.activeProfileId.flowOn(ioDispatcher)
 
+    override val contentRegion: Flow<String>
+        get() = userPreferencesDataStore.contentRegion.flowOn(ioDispatcher)
+
+    override val appLanguage: Flow<String>
+        get() = userPreferencesDataStore.appLanguage.flowOn(ioDispatcher)
+
     override suspend fun setThemeConfig(themeConfig: AppThemeConfig) {
         withContext(ioDispatcher) {
             userPreferencesDataStore.setThemeConfig(themeConfig)
@@ -67,6 +73,18 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setActiveProfileId(profileId: String) {
         withContext(ioDispatcher) {
             userPreferencesDataStore.setActiveProfileId(profileId)
+        }
+    }
+
+    override suspend fun setContentRegion(region: String) {
+        withContext(ioDispatcher) {
+            userPreferencesDataStore.setContentRegion(region)
+        }
+    }
+
+    override suspend fun setAppLanguage(languageCode: String) {
+        withContext(ioDispatcher) {
+            userPreferencesDataStore.setAppLanguage(languageCode)
         }
     }
 }

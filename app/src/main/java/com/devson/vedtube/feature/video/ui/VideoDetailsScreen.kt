@@ -86,8 +86,8 @@ import com.devson.vedtube.feature.common.VideoCardShimmer
 import com.devson.vedtube.feature.player.ui.PlayerControls
 import com.devson.vedtube.feature.player.ui.VideoPlayerSurface
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.ui.res.stringResource
+import com.devson.vedtube.R
 import com.devson.vedtube.feature.video.VideoDetailsViewModel
 
 @Composable
@@ -393,12 +393,12 @@ fun VideoDetailsScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ThumbUp,
-                                        contentDescription = "Likes",
+                                        contentDescription = stringResource(R.string.likes),
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = if (likes > 0) FormatUtils.formatCompactNumber(likes) else "Like",
+                                        text = if (likes > 0) FormatUtils.formatCompactNumber(likes) else stringResource(R.string.like),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -414,7 +414,7 @@ fun VideoDetailsScreen(
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Icon(
                                             imageVector = Icons.Default.ThumbDown,
-                                            contentDescription = "Dislikes",
+                                            contentDescription = stringResource(R.string.dislikes),
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -444,7 +444,7 @@ fun VideoDetailsScreen(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Subscribed", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text(stringResource(R.string.subscribed), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                 }
                             } else {
                                 Button(
@@ -456,7 +456,7 @@ fun VideoDetailsScreen(
                                     ),
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
-                                    Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text(stringResource(R.string.subscribe), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                                 }
                             }
 
@@ -471,12 +471,12 @@ fun VideoDetailsScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = "Downloaded",
+                                            contentDescription = stringResource(R.string.downloaded),
                                             modifier = Modifier.size(16.dp),
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Downloaded", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.downloaded), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
                                 downloadItem != null && downloadItem.isDownloading -> {
@@ -510,11 +510,11 @@ fun VideoDetailsScreen(
                                         } else {
                                             Icon(
                                                 imageVector = Icons.Default.Download,
-                                                contentDescription = "Download",
+                                                contentDescription = stringResource(R.string.download),
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Download", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(stringResource(R.string.download), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                 }
@@ -529,13 +529,13 @@ fun VideoDetailsScreen(
                             ) {
                                 Icon(
                                     imageVector = if (isSavedToAny) Icons.AutoMirrored.Filled.PlaylistAddCheck else Icons.AutoMirrored.Filled.PlaylistAdd,
-                                    contentDescription = "Save to Playlist",
+                                    contentDescription = stringResource(R.string.save_to_playlist),
                                     modifier = Modifier.size(16.dp),
                                     tint = if (isSavedToAny) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isSavedToAny) "Saved" else "Save",
+                                    text = if (isSavedToAny) stringResource(R.string.saved_to_playlist) else stringResource(R.string.save_to_playlist),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -568,7 +568,7 @@ fun VideoDetailsScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Description",
+                                            text = stringResource(R.string.description_title),
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -593,7 +593,7 @@ fun VideoDetailsScreen(
 
                                     if (!uiState.isDescriptionExpanded) {
                                         Text(
-                                            text = "...more",
+                                            text = stringResource(R.string.more),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
@@ -629,12 +629,12 @@ fun VideoDetailsScreen(
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column {
                                         Text(
-                                            text = "Distraction-Free Mode Active",
+                                            text = stringResource(R.string.distraction_free_active),
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "Comments and recommendations are hidden",
+                                            text = stringResource(R.string.distraction_free_desc),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )

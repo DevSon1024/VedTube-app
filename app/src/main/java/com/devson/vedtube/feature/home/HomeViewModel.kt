@@ -139,17 +139,28 @@ class HomeViewModel @Inject constructor(
         initialValue = HomeUiState(isLoadingFeed = true)
     )
 
+    private var currentRegion: String = "IN"
+
     init {
         verifyInfrastructure()
-        loadInitialFeed()
+        viewModelScope.launch {
+            settingsRepository.contentRegion.collect { region ->
+                currentRegion = region
+                loadFeed(region)
+            }
+        }
     }
 
     fun loadInitialFeed() {
+        loadFeed(currentRegion)
+    }
+
+    fun loadFeed(region: String? = currentRegion) {
         viewModelScope.launch {
             _isLoadingFeed.value = true
             _error.value = null
             val result = withContext(ioDispatcher) {
-                mediaProvider.search("Trending")
+                mediaProvider.getTrendingFeed(region)
             }
             _isLoadingFeed.value = false
             result.onSuccess { paged ->

@@ -2,7 +2,9 @@
 
 package com.devson.vedtube.feature.settings.ui
 
+import android.app.LocaleManager
 import android.os.Build
+import android.os.LocaleList
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,16 +26,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SwitchAccount
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,13 +62,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.devson.vedtube.R
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
 import com.devson.vedtube.feature.profile.ui.ProfileSwitchBottomSheet
+import com.devson.vedtube.feature.settings.SettingsUiState
 import com.devson.vedtube.feature.settings.SettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -85,6 +86,8 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showClearAllConfirmDialog by remember { mutableStateOf(false) }
     var showProfileBottomSheet by remember { mutableStateOf(false) }
+    var showRegionDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
 
     // SAF Document Creator (Export JSON)
     val exportLauncher = rememberLauncherForActivityResult(
@@ -167,12 +170,123 @@ fun SettingsScreen(
         )
     }
 
+    // Region Selection Dialog
+    if (showRegionDialog) {
+        AlertDialog(
+            onDismissRequest = { showRegionDialog = false },
+            title = { Text(stringResource(R.string.content_region_title)) },
+            text = {
+                LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    items(SettingsUiState.SUPPORTED_REGIONS.size) { index ->
+                        val region = SettingsUiState.SUPPORTED_REGIONS[index]
+                        val isSelected = uiState.contentRegion.equals(region.code, ignoreCase = true)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setContentRegion(region.code)
+                                    showRegionDialog = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = region.flag, style = MaterialTheme.typography.titleLarge)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = region.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = region.code,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    viewModel.setContentRegion(region.code)
+                                    showRegionDialog = false
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showRegionDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+
+    // Language Picker Dialog
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.app_language_title)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    SettingsUiState.SUPPORTED_LANGUAGES.forEach { lang ->
+                        val isSelected = uiState.appLanguage.equals(lang.code, ignoreCase = true)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setAppLanguage(lang.code)
+                                    applyAppLanguage(context, lang.code)
+                                    showLanguageDialog = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = lang.displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = lang.nativeName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    viewModel.setAppLanguage(lang.code)
+                                    applyAppLanguage(context, lang.code)
+                                    showLanguageDialog = false
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(R.string.close))
+                }
+            }
+        )
+    }
+
     if (showClearAllConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllConfirmDialog = false },
-            title = { Text("Erase all local data?") },
+            title = { Text(stringResource(R.string.clear_data_title)) },
             text = {
-                Text("This will permanently delete your Watch History, Subscriptions, Custom Playlists, and Search History across all profiles. This action cannot be reversed.")
+                Text(stringResource(R.string.clear_data_warning))
             },
             confirmButton = {
                 TextButton(
@@ -181,12 +295,12 @@ fun SettingsScreen(
                         showClearAllConfirmDialog = false
                     }
                 ) {
-                    Text("Erase Everything", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllConfirmDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -197,12 +311,12 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.close)
                         )
                     }
                 }
@@ -219,7 +333,7 @@ fun SettingsScreen(
             // User Profile Section
             item {
                 Text(
-                    text = "User Profile",
+                    text = stringResource(R.string.section_profile),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -263,7 +377,7 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "Tap to switch or manage local profiles",
+                                text = stringResource(R.string.profile_switch_title),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -271,9 +385,123 @@ fun SettingsScreen(
 
                         Icon(
                             imageVector = Icons.Default.SwitchAccount,
-                            contentDescription = "Switch Profiles",
+                            contentDescription = stringResource(R.string.profile_switch_title),
                             tint = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+            }
+
+            // Language & Region Section
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = stringResource(R.string.section_localization),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        // Region Selector Row
+                        val currentRegionObj = SettingsUiState.SUPPORTED_REGIONS.find { it.code.equals(uiState.contentRegion, ignoreCase = true) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showRegionDialog = true }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    imageVector = Icons.Default.Public,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.content_region_title),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.content_region_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text(
+                                    text = "${currentRegionObj?.flag ?: "🌐"} ${currentRegionObj?.code ?: uiState.contentRegion}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                        // App Language Row
+                        val currentLangObj = SettingsUiState.SUPPORTED_LANGUAGES.find { it.code.equals(uiState.appLanguage, ignoreCase = true) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showLanguageDialog = true }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.app_language_title),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = currentLangObj?.nativeName ?: stringResource(R.string.app_language_system),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text(
+                                    text = currentLangObj?.displayName ?: "System",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -282,7 +510,7 @@ fun SettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Appearance",
+                    text = stringResource(R.string.section_appearance),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -296,17 +524,17 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         ThemeOptionRow(
-                            title = "System Default",
+                            title = stringResource(R.string.theme_system),
                             selected = uiState.themeSettings.themeConfig == AppThemeConfig.SYSTEM,
                             onClick = { viewModel.setThemeConfig(AppThemeConfig.SYSTEM) }
                         )
                         ThemeOptionRow(
-                            title = "Light Mode",
+                            title = stringResource(R.string.theme_light),
                             selected = uiState.themeSettings.themeConfig == AppThemeConfig.LIGHT,
                             onClick = { viewModel.setThemeConfig(AppThemeConfig.LIGHT) }
                         )
                         ThemeOptionRow(
-                            title = "Dark Mode",
+                            title = stringResource(R.string.theme_dark),
                             selected = uiState.themeSettings.themeConfig == AppThemeConfig.DARK,
                             onClick = { viewModel.setThemeConfig(AppThemeConfig.DARK) }
                         )
@@ -320,12 +548,12 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Dynamic Color (Material You)",
+                                        text = stringResource(R.string.dynamic_color_title),
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
-                                        text = "Derive accent colors dynamically from your system wallpaper",
+                                        text = stringResource(R.string.dynamic_color_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -344,7 +572,7 @@ fun SettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Player & Playback Controls",
+                    text = stringResource(R.string.section_player),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -359,14 +587,9 @@ fun SettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         // Double-tap seek interval
                         Text(
-                            text = "Double-Tap Skip Interval",
+                            text = stringResource(R.string.skip_interval_title),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Seconds skipped per double-tap gesture on player sides",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Row(
@@ -401,13 +624,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Distraction-Free Mode",
+                                    text = stringResource(R.string.distraction_free_mode_title),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Hide comments and recommended videos on video details screen",
+                                    text = stringResource(R.string.distraction_free_mode_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -428,13 +651,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "SponsorBlock Auto-Skip",
+                                    text = stringResource(R.string.sponsorblock_title),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Automatically skip sponsor segments and promotional intros",
+                                    text = stringResource(R.string.sponsorblock_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -452,7 +675,7 @@ fun SettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Backup & Data Management",
+                    text = stringResource(R.string.section_data),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -485,12 +708,12 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Export Backup (JSON)",
+                                    text = stringResource(R.string.export_data_title),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "Save subscriptions, history, playlists & searches to a local file",
+                                    text = stringResource(R.string.export_data_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -521,12 +744,12 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Import Backup (JSON)",
+                                    text = stringResource(R.string.import_data_title),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = "Restore data from a previously exported VedTube backup file",
+                                    text = stringResource(R.string.import_data_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -557,13 +780,13 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Clear All Local Data",
+                                    text = stringResource(R.string.clear_data_title),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    text = "Permanently wipe all history, subscriptions, playlists & search logs",
+                                    text = stringResource(R.string.clear_data_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -576,6 +799,27 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+private fun applyAppLanguage(context: android.content.Context, langCode: String) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val localeManager = context.getSystemService(LocaleManager::class.java)
+        if (langCode.equals("system", ignoreCase = true)) {
+            localeManager?.applicationLocales = LocaleList.getEmptyLocaleList()
+        } else {
+            localeManager?.applicationLocales = LocaleList.forLanguageTags(langCode)
+        }
+    } else {
+        val locale = if (langCode.equals("system", ignoreCase = true)) {
+            Locale.getDefault()
+        } else {
+            Locale.forLanguageTag(langCode)
+        }
+        val config = context.resources.configuration
+        config.setLocale(locale)
+        @Suppress("DEPRECATION")
+        context.resources.updateConfiguration(config, context.resources.displayMetrics)
     }
 }
 

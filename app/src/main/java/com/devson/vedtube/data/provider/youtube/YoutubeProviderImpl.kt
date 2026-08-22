@@ -23,6 +23,26 @@ class YoutubeProviderImpl @Inject constructor(
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : MediaProvider {
 
+    override suspend fun getTrendingFeed(region: String?): Result<PagedResult<Video>> =
+        withContext(ioDispatcher) {
+            try {
+                val kioskInfo = extractorDataSource.extractTrending(region)
+                val pagedResult = YoutubeMapper.mapKioskInfoToPagedResult(kioskInfo)
+                if (pagedResult.items.isNotEmpty()) {
+                    Result.success(pagedResult)
+                } else {
+                    search("Trending", null)
+                }
+            } catch (e: Throwable) {
+                // Fallback to query search if kiosk extraction fails
+                try {
+                    search("Trending", null)
+                } catch (fallbackError: Throwable) {
+                    Result.failure(YoutubeErrorMapper.map(e))
+                }
+            }
+        }
+
     override suspend fun search(query: String, pageToken: String?): Result<PagedResult<Video>> =
         withContext(ioDispatcher) {
             try {

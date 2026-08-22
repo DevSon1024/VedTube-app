@@ -71,6 +71,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.res.stringResource
+import com.devson.vedtube.R
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.devson.vedtube.core.player.PlayerEvent
@@ -165,14 +167,14 @@ fun HomeScreen(
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                        label = { Text("Home") }
+                        icon = { Icon(Icons.Default.Home, contentDescription = stringResource(R.string.nav_home)) },
+                        label = { Text(stringResource(R.string.nav_home)) }
                     )
                     NavigationBarItem(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        icon = { Icon(Icons.Default.VideoLibrary, contentDescription = "Library") },
-                        label = { Text("Library") }
+                        icon = { Icon(Icons.Default.VideoLibrary, contentDescription = stringResource(R.string.nav_library)) },
+                        label = { Text(stringResource(R.string.nav_library)) }
                     )
                 }
             }
@@ -293,7 +295,7 @@ fun HomeSearchBar(
             },
             active = active,
             onActiveChange = onActiveChange,
-            placeholder = { Text("Search VedTube...") },
+            placeholder = { Text(stringResource(R.string.search_placeholder)) },
             leadingIcon = {
                 if (active || query.isNotEmpty()) {
                     IconButton(
@@ -304,13 +306,13 @@ fun HomeSearchBar(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.close)
                         )
                     }
                 } else {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
+                        contentDescription = stringResource(R.string.search_placeholder)
                     )
                 }
             },
@@ -320,14 +322,14 @@ fun HomeSearchBar(
                         IconButton(onClick = onClearQuery) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Clear text"
+                                contentDescription = stringResource(R.string.clear)
                             )
                         }
                     } else if (!active) {
                         IconButton(onClick = onSettingsClick) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
-                                contentDescription = "Settings",
+                                contentDescription = stringResource(R.string.settings_title),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -382,7 +384,7 @@ fun HomeSearchBar(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Recent Searches",
+                                text = stringResource(R.string.recent_searches),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -394,7 +396,7 @@ fun HomeSearchBar(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Clear all")
+                                Text(stringResource(R.string.clear_all))
                             }
                         }
                     }

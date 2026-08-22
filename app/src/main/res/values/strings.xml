@@ -1,3 +1,122 @@
 <resources>
     <string name="app_name">vedtube</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_library">Library</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Home & Search -->
+    <string name="search_placeholder">Search VedTube...</string>
+    <string name="trending_title">Trending</string>
+    <string name="recent_searches">Recent Searches</string>
+    <string name="clear_all">Clear All</string>
+    <string name="no_results">No results found</string>
+
+    <!-- Common Actions -->
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="confirm">Confirm</string>
+    <string name="save">Save</string>
+    <string name="create">Create</string>
+    <string name="retry">Retry</string>
+    <string name="close">Close</string>
+    <string name="clear">Clear</string>
+    <string name="more">...more</string>
+
+    <!-- Video Details & Player -->
+    <string name="subscribe">Subscribe</string>
+    <string name="subscribed">Subscribed</string>
+    <string name="download">Download</string>
+    <string name="downloaded">Downloaded</string>
+    <string name="downloading">Downloading</string>
+    <string name="save_to_playlist">Save</string>
+    <string name="saved_to_playlist">Saved</string>
+    <string name="description_title">Description</string>
+    <string name="comments_title">Comments</string>
+    <string name="related_videos_title">Related Videos</string>
+    <string name="loading_comments">Loading comments...</string>
+    <string name="no_comments">No comments available</string>
+    <string name="like">Like</string>
+    <string name="likes">Likes</string>
+    <string name="dislikes">Dislikes</string>
+
+    <!-- Player Fit & Controls -->
+    <string name="fit_mode">Fit Mode</string>
+    <string name="fit_fit">Fit</string>
+    <string name="fit_fill">Fill</string>
+    <string name="fit_zoom">Zoom</string>
+    <string name="skip_seconds_forward">+%1$ds</string>
+    <string name="skip_seconds_backward">-%1$ds</string>
+    <string name="sponsor_skipped">Sponsored segment skipped</string>
+    <string name="distraction_free_active">Distraction-Free Mode Active</string>
+    <string name="distraction_free_desc">Comments and recommendations are hidden</string>
+
+    <!-- Library & Offline -->
+    <string name="library_title">Library</string>
+    <string name="watch_history_title">History</string>
+    <string name="subscriptions_title">Subscriptions</string>
+    <string name="playlists_title">Playlists</string>
+    <string name="downloads_title">Downloads</string>
+    <string name="new_playlist_title">New Playlist</string>
+    <string name="playlist_name_label">Playlist Name</string>
+    <string name="playlist_name_hint">e.g. Chill Music, Tutorials</string>
+    <string name="clear_history_dialog_title">Clear watch history?</string>
+    <string name="clear_history_dialog_desc">This will remove all videos from your local watch history.</string>
+    <string name="delete_playlist_dialog_title">Delete Playlist?</string>
+    <string name="delete_playlist_dialog_desc">Are you sure you want to delete this playlist? This action cannot be undone.</string>
+
+    <!-- Empty States -->
+    <string name="empty_library_title">Your library is empty</string>
+    <string name="empty_library_desc">Watch videos, subscribe to channels, or download content to see them here.</string>
+    <string name="empty_history_title">No watch history</string>
+    <string name="empty_history_desc">Videos you watch will show up here.</string>
+    <string name="empty_subscriptions_title">No subscriptions</string>
+    <string name="empty_subscriptions_desc">Subscribe to your favorite creators to see them here.</string>
+    <string name="empty_playlists_title">No playlists</string>
+    <string name="empty_playlists_desc">Create playlists to organize your favorite videos.</string>
+    <string name="empty_downloads_title">No downloads</string>
+    <string name="empty_downloads_desc">Download videos for offline viewing anytime, anywhere.</string>
+    <string name="btn_explore_trending">Explore Trending</string>
+    <string name="btn_search_videos">Search Videos</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="section_appearance">Appearance</string>
+    <string name="theme_title">Theme</string>
+    <string name="theme_system">Follow System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="dynamic_color_title">Dynamic Colors</string>
+    <string name="dynamic_color_desc">Match app colors with your device wallpaper (Material You)</string>
+
+    <string name="section_localization">Language &amp; Region</string>
+    <string name="app_language_title">App Language</string>
+    <string name="app_language_system">System Default</string>
+    <string name="content_region_title">Content Region</string>
+    <string name="content_region_desc">Trending content will be tailored to this region</string>
+
+    <string name="section_player">Player &amp; Content</string>
+    <string name="skip_interval_title">Double-Tap Seek Interval</string>
+    <string name="distraction_free_mode_title">Distraction-Free Mode</string>
+    <string name="distraction_free_mode_desc">Hide comments and related video recommendations</string>
+    <string name="sponsorblock_title">SponsorBlock</string>
+    <string name="sponsorblock_desc">Automatically skip sponsored segments in videos</string>
+
+    <string name="section_profile">User Profiles</string>
+    <string name="profile_active_label">Active Profile</string>
+    <string name="profile_switch_title">Switch Profile</string>
+    <string name="profile_new_title">Create Profile</string>
+    <string name="profile_name_label">Profile Name</string>
+    <string name="profile_delete_dialog_title">Delete Profile?</string>
+    <string name="profile_delete_dialog_desc">All history, subscriptions, and playlists for this profile will be deleted.</string>
+
+    <string name="section_data">Data &amp; Backup</string>
+    <string name="export_data_title">Export Data</string>
+    <string name="export_data_desc">Backup history, subscriptions, playlists &amp; searches to a JSON file</string>
+    <string name="import_data_title">Import Data</string>
+    <string name="import_data_desc">Restore your data from a previously exported backup file</string>
+    <string name="clear_data_title">Wipe All Local Data</string>
+    <string name="clear_data_desc">Erase all watch history, subscriptions, playlists, and search queries</string>
+    <string name="clear_data_warning">Are you sure you want to erase all data? This action cannot be undone.</string>
 </resources>

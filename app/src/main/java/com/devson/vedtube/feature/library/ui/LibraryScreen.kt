@@ -61,10 +61,14 @@ import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.ui.res.stringResource
+import com.devson.vedtube.R
 import com.devson.vedtube.domain.model.ChannelSubscription
 import com.devson.vedtube.domain.model.DownloadItem
 import com.devson.vedtube.domain.model.LocalPlaylist
 import com.devson.vedtube.domain.model.Video
+import com.devson.vedtube.feature.common.EmptyStateView
 import com.devson.vedtube.feature.common.VideoCard
 import com.devson.vedtube.feature.library.LibraryViewModel
 
@@ -87,13 +91,13 @@ fun LibraryScreen(
                 showNewPlaylistDialog = false
                 newPlaylistName = ""
             },
-            title = { Text("New Playlist") },
+            title = { Text(stringResource(R.string.new_playlist_title)) },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
-                    label = { Text("Playlist Name") },
-                    placeholder = { Text("e.g. Chill Music, Tutorials") },
+                    label = { Text(stringResource(R.string.playlist_name_label)) },
+                    placeholder = { Text(stringResource(R.string.playlist_name_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
@@ -110,7 +114,7 @@ fun LibraryScreen(
                     },
                     enabled = newPlaylistName.isNotBlank()
                 ) {
-                    Text("Create")
+                    Text(stringResource(R.string.create))
                 }
             },
             dismissButton = {
@@ -118,7 +122,7 @@ fun LibraryScreen(
                     showNewPlaylistDialog = false
                     newPlaylistName = ""
                 }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -127,8 +131,8 @@ fun LibraryScreen(
     if (showClearDialog) {
         AlertDialog(
             onDismissRequest = { showClearDialog = false },
-            title = { Text("Clear watch history?") },
-            text = { Text("This will remove all videos from your local watch history.") },
+            title = { Text(stringResource(R.string.clear_history_dialog_title)) },
+            text = { Text(stringResource(R.string.clear_history_dialog_desc)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -136,12 +140,12 @@ fun LibraryScreen(
                         showClearDialog = false
                     }
                 ) {
-                    Text("Clear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.clear), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -156,11 +160,25 @@ fun LibraryScreen(
         // Top Header
         item {
             Text(
-                text = "Library",
+                text = stringResource(R.string.library_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
+        }
+
+        if (uiState.subscriptionsList.isEmpty() && uiState.playlists.isEmpty() && uiState.downloadsList.isEmpty() && uiState.historyList.isEmpty()) {
+            item {
+                EmptyStateView(
+                    icon = Icons.Default.VideoLibrary,
+                    title = stringResource(R.string.empty_library_title),
+                    description = stringResource(R.string.empty_library_desc),
+                    primaryButtonText = stringResource(R.string.btn_explore_trending),
+                    onPrimaryButtonClick = onSettingsClick,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
         }
 
         // Subscriptions Section
@@ -182,7 +200,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Subscriptions",
+                            text = stringResource(R.string.subscriptions_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -231,7 +249,7 @@ fun LibraryScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Playlists",
+                        text = stringResource(R.string.playlists_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -243,7 +261,7 @@ fun LibraryScreen(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("New", fontSize = 13.sp)
+                    Text(stringResource(R.string.create), fontSize = 13.sp)
                 }
             }
         }
@@ -287,7 +305,7 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "No custom playlists yet",
+                            text = stringResource(R.string.empty_playlists_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -295,7 +313,7 @@ fun LibraryScreen(
                             onClick = { showNewPlaylistDialog = true },
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Create")
+                            Text(stringResource(R.string.create))
                         }
                     }
                 }
@@ -320,7 +338,7 @@ fun LibraryScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Downloads",
+                        text = stringResource(R.string.downloads_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -383,7 +401,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "No downloads. Tap Download on any video for offline viewing.",
+                            text = stringResource(R.string.empty_downloads_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -410,7 +428,7 @@ fun LibraryScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "History",
+                        text = stringResource(R.string.watch_history_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -420,7 +438,7 @@ fun LibraryScreen(
                     IconButton(onClick = { showClearDialog = true }) {
                         Icon(
                             imageVector = Icons.Default.DeleteSweep,
-                            contentDescription = "Clear all history",
+                            contentDescription = stringResource(R.string.clear_all),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -458,7 +476,7 @@ fun LibraryScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Remove from history",
+                            contentDescription = stringResource(R.string.delete),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
@@ -489,13 +507,13 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "No watch history yet",
+                            text = stringResource(R.string.empty_history_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Videos you watch will appear here with your saved progress so you can resume anytime.",
+                            text = stringResource(R.string.empty_history_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center

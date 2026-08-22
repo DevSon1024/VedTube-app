@@ -39,6 +39,12 @@ class NewPipeExtractorDataSource @Inject constructor(
         return SearchInfo.getInfo(service, searchQH)
     }
 
+    override suspend fun extractTrending(region: String?): org.schabi.newpipe.extractor.kiosk.KioskInfo {
+        val service = ServiceList.YouTube
+        val kioskId = service.kioskList.defaultKioskId
+        return org.schabi.newpipe.extractor.kiosk.KioskInfo.getInfo(service, kioskId)
+    }
+
     override suspend fun extractChannelInfo(channelIdOrHandle: String): ChannelInfo {
         val url = when {
             channelIdOrHandle.startsWith("http://") || channelIdOrHandle.startsWith("https://") -> channelIdOrHandle

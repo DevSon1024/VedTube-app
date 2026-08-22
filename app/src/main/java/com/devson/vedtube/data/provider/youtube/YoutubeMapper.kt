@@ -92,6 +92,21 @@ object YoutubeMapper {
         )
     }
 
+    fun mapKioskInfoToPagedResult(kioskInfo: org.schabi.newpipe.extractor.kiosk.KioskInfo): PagedResult<Video> {
+        val videos = kioskInfo.relatedItems.orEmpty().mapNotNull { item ->
+            if (item is StreamInfoItem) {
+                mapStreamInfoItemToVideo(item)
+            } else {
+                null
+            }
+        }
+        val nextToken = if (kioskInfo.hasNextPage()) kioskInfo.nextPage?.url ?: kioskInfo.nextPage?.id else null
+        return PagedResult(
+            items = videos,
+            nextPageToken = nextToken
+        )
+    }
+
     fun mapChannelInfoToChannel(channelInfo: ChannelInfo): Channel {
         val avatar = channelInfo.avatars.orEmpty().maxByOrNull { it.width }?.url
             ?: channelInfo.avatars.orEmpty().firstOrNull()?.url
