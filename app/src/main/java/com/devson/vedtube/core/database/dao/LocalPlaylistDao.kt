@@ -19,16 +19,20 @@ interface LocalPlaylistDao {
     @Query("DELETE FROM local_playlists WHERE playlistId = :playlistId")
     suspend fun deletePlaylist(playlistId: String)
 
-    @Query("SELECT * FROM local_playlists ORDER BY createdAt DESC")
-    fun getAllPlaylists(): Flow<List<LocalPlaylistEntity>>
+    @Query("SELECT * FROM local_playlists WHERE profileId = :profileId ORDER BY createdAt DESC")
+    fun getAllPlaylists(profileId: String = "profile_default"): Flow<List<LocalPlaylistEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM local_playlists WHERE profileId = :profileId ORDER BY createdAt DESC")
+    fun getAllPlaylistsWithVideos(profileId: String = "profile_default"): Flow<List<LocalPlaylistWithVideos>>
+
+    @Transaction
+    @Query("SELECT * FROM local_playlists WHERE profileId = :profileId ORDER BY createdAt DESC")
+    suspend fun getAllPlaylistsWithVideosSync(profileId: String = "profile_default"): List<LocalPlaylistWithVideos>
 
     @Transaction
     @Query("SELECT * FROM local_playlists ORDER BY createdAt DESC")
-    fun getAllPlaylistsWithVideos(): Flow<List<LocalPlaylistWithVideos>>
-
-    @Transaction
-    @Query("SELECT * FROM local_playlists ORDER BY createdAt DESC")
-    suspend fun getAllPlaylistsWithVideosSync(): List<LocalPlaylistWithVideos>
+    suspend fun getAllPlaylistsWithVideosAllProfilesSync(): List<LocalPlaylistWithVideos>
 
     @Transaction
     @Query("SELECT * FROM local_playlists WHERE playlistId = :playlistId")
@@ -40,11 +44,14 @@ interface LocalPlaylistDao {
     @Query("DELETE FROM playlist_videos WHERE playlistId = :playlistId AND videoId = :videoId")
     suspend fun removeVideoFromPlaylist(playlistId: String, videoId: String)
 
-    @Query("SELECT playlistId FROM playlist_videos WHERE videoId = :videoId")
-    fun getPlaylistIdsContainingVideo(videoId: String): Flow<List<String>>
+    @Query("SELECT pv.playlistId FROM playlist_videos pv INNER JOIN local_playlists lp ON pv.playlistId = lp.playlistId WHERE pv.videoId = :videoId AND lp.profileId = :profileId")
+    fun getPlaylistIdsContainingVideo(videoId: String, profileId: String = "profile_default"): Flow<List<String>>
 
     @Query("SELECT COUNT(*) FROM playlist_videos WHERE playlistId = :playlistId")
     fun getVideoCount(playlistId: String): Flow<Int>
+
+    @Query("DELETE FROM local_playlists WHERE profileId = :profileId")
+    suspend fun clearPlaylistsForProfile(profileId: String = "profile_default")
 
     @Query("DELETE FROM local_playlists")
     suspend fun clearAllPlaylists()

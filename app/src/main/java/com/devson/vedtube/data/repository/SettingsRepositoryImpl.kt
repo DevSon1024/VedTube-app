@@ -25,6 +25,15 @@ class SettingsRepositoryImpl @Inject constructor(
     override val sponsorBlockEnabled: Flow<Boolean>
         get() = userPreferencesDataStore.sponsorBlockEnabled.flowOn(ioDispatcher)
 
+    override val skipIntervalSeconds: Flow<Int>
+        get() = userPreferencesDataStore.skipIntervalSeconds.flowOn(ioDispatcher)
+
+    override val distractionFreeMode: Flow<Boolean>
+        get() = userPreferencesDataStore.distractionFreeMode.flowOn(ioDispatcher)
+
+    override val activeProfileId: Flow<String>
+        get() = userPreferencesDataStore.activeProfileId.flowOn(ioDispatcher)
+
     override suspend fun setThemeConfig(themeConfig: AppThemeConfig) {
         withContext(ioDispatcher) {
             userPreferencesDataStore.setThemeConfig(themeConfig)
@@ -40,6 +49,24 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setSponsorBlockEnabled(enabled: Boolean) {
         withContext(ioDispatcher) {
             userPreferencesDataStore.setSponsorBlockEnabled(enabled)
+        }
+    }
+
+    override suspend fun setSkipIntervalSeconds(seconds: Int) {
+        withContext(ioDispatcher) {
+            userPreferencesDataStore.setSkipIntervalSeconds(seconds)
+        }
+    }
+
+    override suspend fun setDistractionFreeMode(enabled: Boolean) {
+        withContext(ioDispatcher) {
+            userPreferencesDataStore.setDistractionFreeMode(enabled)
+        }
+    }
+
+    override suspend fun setActiveProfileId(profileId: String) {
+        withContext(ioDispatcher) {
+            userPreferencesDataStore.setActiveProfileId(profileId)
         }
     }
 }

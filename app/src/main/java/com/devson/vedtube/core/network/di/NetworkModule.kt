@@ -142,6 +142,8 @@ object NetworkModule {
             .create(CobaltApiService::class.java)
     }
 
+    private const val RYD_BASE_URL = "https://returnyoutubedislikeapi.com/"
+
     @Provides
     @Singleton
     fun providesSponsorBlockApiService(
@@ -155,5 +157,20 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(com.devson.vedtube.data.provider.sponsorblock.SponsorBlockApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providesRydApiService(
+        okHttpClient: OkHttpClient,
+        json: Json
+    ): com.devson.vedtube.data.provider.ryd.RydApiService {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl(RYD_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.devson.vedtube.data.provider.ryd.RydApiService::class.java)
     }
 }

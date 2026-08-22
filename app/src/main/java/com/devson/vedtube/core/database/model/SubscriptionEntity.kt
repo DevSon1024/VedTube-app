@@ -1,15 +1,17 @@
 package com.devson.vedtube.core.database.model
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
- * Room Entity representing a locally subscribed channel.
+ * Room Entity representing a locally subscribed channel, isolated per user profile.
  */
-@Entity(tableName = "subscriptions")
+@Entity(
+    tableName = "subscriptions",
+    primaryKeys = ["profileId", "channelId"]
+)
 data class SubscriptionEntity(
-    @PrimaryKey
     val channelId: String,
+    val profileId: String = "profile_default",
     val channelName: String,
     val avatarUrl: String,
     val subscribedAt: Long = System.currentTimeMillis()

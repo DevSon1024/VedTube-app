@@ -1,15 +1,17 @@
 package com.devson.vedtube.core.database.model
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
- * Room Entity representing a video in the local watch history.
+ * Room Entity representing a video in the local watch history, isolated per user profile.
  */
-@Entity(tableName = "watch_history")
+@Entity(
+    tableName = "watch_history",
+    primaryKeys = ["profileId", "videoId"]
+)
 data class WatchHistoryEntity(
-    @PrimaryKey
     val videoId: String,
+    val profileId: String = "profile_default",
     val title: String,
     val channelName: String,
     val thumbnailUrl: String,

@@ -1,7 +1,9 @@
 package com.devson.vedtube.feature.video
 
 import com.devson.vedtube.domain.model.AppError
+import com.devson.vedtube.domain.model.Comment
 import com.devson.vedtube.domain.model.DownloadItem
+import com.devson.vedtube.domain.model.LocalPlaylist
 import com.devson.vedtube.domain.model.VideoDetails
 import com.devson.vedtube.domain.model.VideoStream
 
@@ -17,7 +19,7 @@ data class VideoDetailsUiState(
     val isDownloadQualitySheetVisible: Boolean = false,
     val availableDownloadStreams: List<VideoStream> = emptyList(),
     val isLoadingDownloadStreams: Boolean = false,
-    val comments: List<com.devson.vedtube.domain.model.Comment> = emptyList(),
+    val comments: List<Comment> = emptyList(),
     val commentsNextPageToken: String? = null,
     val isLoadingComments: Boolean = false,
     val isLoadingMoreComments: Boolean = false,
@@ -25,6 +27,8 @@ data class VideoDetailsUiState(
     val totalCommentsCount: Long? = null,
     val isCommentsSheetVisible: Boolean = false,
     val isSaveToPlaylistSheetVisible: Boolean = false,
-    val playlists: List<com.devson.vedtube.domain.model.LocalPlaylist> = emptyList(),
-    val containingPlaylistIds: List<String> = emptyList()
+    val playlists: List<LocalPlaylist> = emptyList(),
+    val containingPlaylistIds: List<String> = emptyList(),
+    val dislikesCount: Long? = null,
+    val isDistractionFreeMode: Boolean = false
 )

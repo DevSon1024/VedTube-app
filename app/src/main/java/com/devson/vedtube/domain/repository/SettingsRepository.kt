@@ -7,7 +7,14 @@ import kotlinx.coroutines.flow.Flow
 interface SettingsRepository {
     val themeSettings: Flow<ThemeSettings>
     val sponsorBlockEnabled: Flow<Boolean>
+    val skipIntervalSeconds: Flow<Int>
+    val distractionFreeMode: Flow<Boolean>
+    val activeProfileId: Flow<String>
+
     suspend fun setThemeConfig(themeConfig: AppThemeConfig)
     suspend fun setDynamicColor(enabled: Boolean)
     suspend fun setSponsorBlockEnabled(enabled: Boolean)
+    suspend fun setSkipIntervalSeconds(seconds: Int)
+    suspend fun setDistractionFreeMode(enabled: Boolean)
+    suspend fun setActiveProfileId(profileId: String)
 }

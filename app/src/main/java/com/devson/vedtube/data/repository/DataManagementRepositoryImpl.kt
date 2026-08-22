@@ -34,10 +34,10 @@ class DataManagementRepositoryImpl @Inject constructor(
 
     override suspend fun exportData(outputStream: OutputStream): Result<BackupSummary> = withContext(ioDispatcher) {
         runCatching {
-            val subscriptions = database.subscriptionDao().getAllSubscriptionsSync()
-            val watchHistory = database.watchHistoryDao().getAllHistorySync()
-            val playlistsWithVideos = database.localPlaylistDao().getAllPlaylistsWithVideosSync()
-            val searchHistory = database.searchHistoryDao().getAllQueriesSync()
+            val subscriptions = database.subscriptionDao().getAllSubscriptionsAllProfilesSync()
+            val watchHistory = database.watchHistoryDao().getAllHistoryAllProfilesSync()
+            val playlistsWithVideos = database.localPlaylistDao().getAllPlaylistsWithVideosAllProfilesSync()
+            val searchHistory = database.searchHistoryDao().getAllQueriesAllProfilesSync()
 
             val backupDto = VedTubeBackupDto(
                 version = 1,
@@ -119,7 +119,7 @@ class DataManagementRepositoryImpl @Inject constructor(
                 // Subscriptions
                 backupDto.subscriptions.forEach { sub ->
                     database.openHelper.writableDatabase.execSQL(
-                        "INSERT OR REPLACE INTO subscriptions (channelId, channelName, avatarUrl, subscribedAt) VALUES (?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO subscriptions (channelId, profileId, channelName, avatarUrl, subscribedAt) VALUES (?, 'profile_default', ?, ?, ?)",
                         arrayOf(sub.channelId, sub.channelName, sub.avatarUrl, sub.subscribedAt)
                     )
                 }
@@ -127,7 +127,7 @@ class DataManagementRepositoryImpl @Inject constructor(
                 // Watch History
                 backupDto.watchHistory.forEach { hist ->
                     database.openHelper.writableDatabase.execSQL(
-                        "INSERT OR REPLACE INTO watch_history (videoId, title, channelName, thumbnailUrl, durationMs, progressMs, lastWatchedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        "INSERT OR REPLACE INTO watch_history (videoId, profileId, title, channelName, thumbnailUrl, durationMs, progressMs, lastWatchedAt) VALUES (?, 'profile_default', ?, ?, ?, ?, ?, ?)",
                         arrayOf(hist.videoId, hist.title, hist.channelName, hist.thumbnailUrl, hist.durationMs, hist.progressMs, hist.lastWatchedAt)
                     )
                 }
@@ -135,7 +135,7 @@ class DataManagementRepositoryImpl @Inject constructor(
                 // Playlists & Playlist Videos
                 backupDto.playlists.forEach { pl ->
                     database.openHelper.writableDatabase.execSQL(
-                        "INSERT OR REPLACE INTO local_playlists (playlistId, name, createdAt) VALUES (?, ?, ?)",
+                        "INSERT OR REPLACE INTO local_playlists (playlistId, profileId, name, createdAt) VALUES (?, 'profile_default', ?, ?)",
                         arrayOf(pl.playlistId, pl.name, pl.createdAt)
                     )
 
@@ -151,7 +151,7 @@ class DataManagementRepositoryImpl @Inject constructor(
                 // Search History
                 backupDto.searchHistory.forEach { sh ->
                     database.openHelper.writableDatabase.execSQL(
-                        "INSERT OR REPLACE INTO search_history (`query`, `timestamp`) VALUES (?, ?)",
+                        "INSERT OR REPLACE INTO search_history (`query`, `profileId`, `timestamp`) VALUES (?, 'profile_default', ?)",
                         arrayOf(sh.query, sh.timestamp)
                     )
                 }
@@ -169,11 +169,11 @@ class DataManagementRepositoryImpl @Inject constructor(
 
     override suspend fun clearAllData(): Result<Unit> = withContext(ioDispatcher) {
         runCatching {
-            database.subscriptionDao().clearAll()
-            database.watchHistoryDao().clearHistory()
+            database.subscriptionDao().clearAllProfiles()
+            database.watchHistoryDao().clearAll()
             database.localPlaylistDao().clearAllPlaylists()
             database.localPlaylistDao().clearAllPlaylistVideos()
-            database.searchHistoryDao().clearAll()
+            database.searchHistoryDao().clearAllProfiles()
         }
     }
 }

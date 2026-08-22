@@ -63,4 +63,16 @@ abstract class RepositoryModule {
     abstract fun bindDataManagementRepository(
         dataManagementRepositoryImpl: com.devson.vedtube.data.repository.DataManagementRepositoryImpl
     ): com.devson.vedtube.domain.repository.DataManagementRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRydRepository(
+        rydRepositoryImpl: com.devson.vedtube.data.repository.RydRepositoryImpl
+    ): com.devson.vedtube.domain.repository.RydRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindUserProfileRepository(
+        userProfileRepositoryImpl: com.devson.vedtube.data.repository.UserProfileRepositoryImpl
+    ): com.devson.vedtube.domain.repository.UserProfileRepository
 }

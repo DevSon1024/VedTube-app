@@ -15,6 +15,9 @@ import com.devson.vedtube.domain.model.VideoDetails
 import com.devson.vedtube.domain.model.VideoStream
 import com.devson.vedtube.domain.provider.MediaProvider
 import com.devson.vedtube.domain.repository.DownloadRepository
+import com.devson.vedtube.domain.repository.PlaylistRepository
+import com.devson.vedtube.domain.repository.RydRepository
+import com.devson.vedtube.domain.repository.SettingsRepository
 import com.devson.vedtube.domain.repository.SubscriptionRepository
 import com.devson.vedtube.domain.repository.WatchHistoryRepository
 import com.devson.vedtube.domain.resolver.PlaybackResolver
@@ -39,7 +42,9 @@ class VideoDetailsViewModel @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
     private val watchHistoryRepository: WatchHistoryRepository,
     private val downloadRepository: DownloadRepository,
-    private val playlistRepository: com.devson.vedtube.domain.repository.PlaylistRepository,
+    private val playlistRepository: PlaylistRepository,
+    private val rydRepository: RydRepository,
+    private val settingsRepository: SettingsRepository,
     private val playbackResolver: PlaybackResolver,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
@@ -51,6 +56,7 @@ class VideoDetailsViewModel @Inject constructor(
     private var subscriptionObserveJob: Job? = null
     private var downloadObserveJob: Job? = null
     private var playlistObserveJob: Job? = null
+    private var rydJob: Job? = null
 
     init {
         // Observe watch history progress for related video thumbnails
@@ -62,6 +68,16 @@ class VideoDetailsViewModel @Inject constructor(
         // Observe playlists
         playlistRepository.getAllPlaylists().onEach { playlists ->
             _uiState.update { it.copy(playlists = playlists) }
+        }.launchIn(viewModelScope)
+
+        // Observe Distraction-Free Mode from settings
+        settingsRepository.distractionFreeMode.onEach { distractionFree ->
+            _uiState.update { it.copy(isDistractionFreeMode = distractionFree) }
+        }.launchIn(viewModelScope)
+
+        // Observe Skip Interval from settings and propagate to player
+        settingsRepository.skipIntervalSeconds.onEach { interval ->
+            vedPlayer.setSkipInterval(interval)
         }.launchIn(viewModelScope)
 
         val initialVideoId = savedStateHandle.get<String>("videoId")
@@ -83,12 +99,14 @@ class VideoDetailsViewModel @Inject constructor(
                 isLoadingMoreComments = false,
                 commentsError = null,
                 totalCommentsCount = null,
-                isCommentsSheetVisible = false
+                isCommentsSheetVisible = false,
+                dislikesCount = null
             )
         }
 
         observeDownloadStatus(videoId)
         observePlaylistStatus(videoId)
+        loadRydDislikes(videoId)
 
         // Trigger playback on player if it's not already playing this exact video
         val currentPlayingVideo = vedPlayer.playerState.value.currentVideo
@@ -161,6 +179,20 @@ class VideoDetailsViewModel @Inject constructor(
         }
     }
 
+    private fun loadRydDislikes(videoId: String) {
+        rydJob?.cancel()
+        rydJob = viewModelScope.launch {
+            val result = withContext(ioDispatcher) {
+                rydRepository.getDislikes(videoId)
+            }
+            result.onSuccess { dislikes ->
+                _uiState.update { it.copy(dislikesCount = dislikes) }
+            }.onFailure {
+                // Graceful fallback: Keep dislikesCount null without affecting video experience
+            }
+        }
+    }
+
     private fun observeSubscription(channelId: String) {
         subscriptionObserveJob?.cancel()
         subscriptionObserveJob = subscriptionRepository.isSubscribed(channelId).onEach { isSub ->
@@ -198,63 +230,50 @@ class VideoDetailsViewModel @Inject constructor(
 
         val currentDownload = _uiState.value.downloadItem
         if (currentDownload != null && currentDownload.isCompleted) {
+            // Already downloaded: delete/remove download
+            viewModelScope.launch(ioDispatcher) {
+                downloadRepository.deleteDownload(videoId)
+            }
             return
         }
 
-        _uiState.update { it.copy(isLoadingDownloadStreams = true) }
+        if (currentDownload != null && currentDownload.isDownloading) {
+            // Cancel downloading
+            viewModelScope.launch(ioDispatcher) {
+                downloadRepository.cancelDownload(videoId)
+            }
+            return
+        }
+
+        // Open download quality picker sheet
+        _uiState.update {
+            it.copy(
+                isDownloadQualitySheetVisible = true,
+                isLoadingDownloadStreams = true,
+                availableDownloadStreams = emptyList()
+            )
+        }
 
         viewModelScope.launch {
             val result = withContext(ioDispatcher) {
-                playbackResolver.resolve(videoId, PlaybackPreferences())
+                playbackResolver.resolve(videoId = videoId)
             }
 
-            result.onSuccess { source ->
-                // Filter progressive streams with direct audio+video (or all streams available)
-                val progressiveStreams = source.streams.ifEmpty {
-                    // Fallback stream if list is empty
-                    listOf(
-                        VideoStream(
-                            url = "https://www.youtube.com/watch?v=$videoId",
-                            resolution = "720p",
-                            width = 1280,
-                            height = 720,
-                            bitrate = 1000000,
-                            fps = 30,
-                            format = "mp4"
-                        )
-                    )
-                }
-
+            result.onSuccess { resolvedMedia ->
                 _uiState.update {
                     it.copy(
                         isLoadingDownloadStreams = false,
-                        availableDownloadStreams = progressiveStreams,
-                        isDownloadQualitySheetVisible = true
+                        availableDownloadStreams = resolvedMedia.streams
                     )
                 }
             }.onFailure {
                 _uiState.update {
                     it.copy(
                         isLoadingDownloadStreams = false,
-                        error = AppError.ContentUnavailable("Could not fetch download stream options")
+                        availableDownloadStreams = emptyList()
                     )
                 }
             }
-        }
-    }
-
-    fun onSelectDownloadQuality(stream: VideoStream) {
-        val video = _uiState.value.details?.toVideo()
-            ?: Video(
-                id = _uiState.value.videoId,
-                title = _uiState.value.details?.title ?: "Video",
-                uploaderName = _uiState.value.details?.uploaderName ?: "Creator"
-            )
-
-        _uiState.update { it.copy(isDownloadQualitySheetVisible = false) }
-
-        viewModelScope.launch(ioDispatcher) {
-            downloadRepository.startDownload(video, stream)
         }
     }
 
@@ -262,27 +281,41 @@ class VideoDetailsViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloadQualitySheetVisible = false) }
     }
 
-    fun deleteDownload(videoId: String) {
-        viewModelScope.launch(ioDispatcher) {
-            downloadRepository.deleteDownload(videoId)
-        }
-    }
+    fun onSelectDownloadQuality(stream: VideoStream) = startDownload(stream)
 
-    fun onRelatedVideoClick(video: Video) {
-        loadVideo(videoId = video.id, initialVideo = video)
+    fun startDownload(stream: VideoStream) {
+        val details = _uiState.value.details ?: return
+        val video = Video(
+            id = details.id,
+            title = details.title,
+            uploaderName = details.uploaderName,
+            thumbnailUrl = details.thumbnailUrl ?: "",
+            durationSeconds = details.durationSeconds
+        )
+
+        _uiState.update { it.copy(isDownloadQualitySheetVisible = false) }
+
+        viewModelScope.launch(ioDispatcher) {
+            downloadRepository.startDownload(
+                video = video,
+                stream = stream
+            )
+        }
     }
 
     fun toggleDescription() {
         _uiState.update { it.copy(isDescriptionExpanded = !it.isDescriptionExpanded) }
     }
 
+    fun onRelatedVideoClick(video: Video) {
+        vedPlayer.playVideo(video)
+        loadVideo(video.id)
+    }
+
     fun openComments() {
         _uiState.update { it.copy(isCommentsSheetVisible = true) }
-        if (_uiState.value.comments.isEmpty() && !_uiState.value.isLoadingComments) {
-            val videoId = _uiState.value.videoId
-            if (videoId.isNotBlank()) {
-                loadComments(videoId)
-            }
+        if (_uiState.value.comments.isEmpty()) {
+            loadComments(_uiState.value.videoId)
         }
     }
 

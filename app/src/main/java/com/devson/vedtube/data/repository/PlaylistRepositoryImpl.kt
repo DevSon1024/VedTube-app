@@ -5,12 +5,16 @@ import com.devson.vedtube.core.common.dispatcher.VedTubeDispatchers
 import com.devson.vedtube.core.database.dao.LocalPlaylistDao
 import com.devson.vedtube.core.database.model.LocalPlaylistEntity
 import com.devson.vedtube.core.database.model.PlaylistVideoCrossRef
+import com.devson.vedtube.core.datastore.UserPreferencesDataStore
 import com.devson.vedtube.domain.model.LocalPlaylist
 import com.devson.vedtube.domain.model.LocalPlaylistDetail
 import com.devson.vedtube.domain.model.Video
 import com.devson.vedtube.domain.repository.PlaylistRepository
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -21,11 +25,16 @@ import javax.inject.Singleton
 @Singleton
 class PlaylistRepositoryImpl @Inject constructor(
     private val localPlaylistDao: LocalPlaylistDao,
+    private val userPreferencesDataStore: UserPreferencesDataStore,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : PlaylistRepository {
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getAllPlaylists(): Flow<List<LocalPlaylist>> {
-        return localPlaylistDao.getAllPlaylistsWithVideos()
+        return userPreferencesDataStore.activeProfileId
+            .flatMapLatest { profileId ->
+                localPlaylistDao.getAllPlaylistsWithVideos(profileId)
+            }
             .map { list ->
                 list.map { withVideos ->
                     LocalPlaylist(
@@ -63,8 +72,12 @@ class PlaylistRepositoryImpl @Inject constructor(
             .flowOn(ioDispatcher)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun getPlaylistIdsContainingVideo(videoId: String): Flow<List<String>> {
-        return localPlaylistDao.getPlaylistIdsContainingVideo(videoId)
+        return userPreferencesDataStore.activeProfileId
+            .flatMapLatest { profileId ->
+                localPlaylistDao.getPlaylistIdsContainingVideo(videoId, profileId)
+            }
             .flowOn(ioDispatcher)
     }
 
@@ -72,9 +85,11 @@ class PlaylistRepositoryImpl @Inject constructor(
         val trimmed = name.trim().ifBlank { "New Playlist" }
         val id = UUID.randomUUID().toString()
         withContext(ioDispatcher) {
+            val profileId = userPreferencesDataStore.activeProfileId.first()
             localPlaylistDao.insertPlaylist(
                 LocalPlaylistEntity(
                     playlistId = id,
+                    profileId = profileId,
                     name = trimmed,
                     createdAt = System.currentTimeMillis()
                 )

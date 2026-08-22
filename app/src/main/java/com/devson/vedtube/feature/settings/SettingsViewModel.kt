@@ -7,6 +7,7 @@ import com.devson.vedtube.core.common.dispatcher.VedTubeDispatchers
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
 import com.devson.vedtube.domain.repository.DataManagementRepository
 import com.devson.vedtube.domain.repository.SettingsRepository
+import com.devson.vedtube.domain.repository.UserProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,19 +26,38 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val dataManagementRepository: DataManagementRepository,
+    private val userProfileRepository: UserProfileRepository,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _exportImportState = MutableStateFlow(SettingsUiState())
 
     val uiState: StateFlow<SettingsUiState> = combine(
-        settingsRepository.themeSettings,
-        settingsRepository.sponsorBlockEnabled,
+        combine(
+            settingsRepository.themeSettings,
+            settingsRepository.sponsorBlockEnabled,
+            settingsRepository.skipIntervalSeconds,
+            settingsRepository.distractionFreeMode
+        ) { theme, sponsorBlock, skipInterval, distractionFree ->
+            ThemeAndPlaybackConfig(theme, sponsorBlock, skipInterval, distractionFree)
+        },
+        combine(
+            userProfileRepository.allProfiles,
+            userProfileRepository.activeProfileId,
+            userProfileRepository.activeProfile
+        ) { profiles, activeId, activeProf ->
+            ProfileConfig(profiles, activeId, activeProf)
+        },
         _exportImportState
-    ) { theme, sponsorBlock, customState ->
+    ) { playbackConfig, profileConfig, customState ->
         customState.copy(
-            themeSettings = theme,
-            isSponsorBlockEnabled = sponsorBlock
+            themeSettings = playbackConfig.theme,
+            isSponsorBlockEnabled = playbackConfig.sponsorBlock,
+            skipIntervalSeconds = playbackConfig.skipInterval,
+            isDistractionFreeMode = playbackConfig.distractionFree,
+            profiles = profileConfig.profiles,
+            activeProfileId = profileConfig.activeId,
+            activeProfile = profileConfig.activeProfile
         )
     }.stateIn(
         scope = viewModelScope,
@@ -60,6 +80,37 @@ class SettingsViewModel @Inject constructor(
     fun setSponsorBlockEnabled(enabled: Boolean) {
         viewModelScope.launch(ioDispatcher) {
             settingsRepository.setSponsorBlockEnabled(enabled)
+        }
+    }
+
+    fun setSkipIntervalSeconds(seconds: Int) {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setSkipIntervalSeconds(seconds)
+        }
+    }
+
+    fun setDistractionFreeMode(enabled: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setDistractionFreeMode(enabled)
+        }
+    }
+
+    fun setActiveProfile(profileId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            userProfileRepository.setActiveProfile(profileId)
+        }
+    }
+
+    fun createProfile(name: String) {
+        viewModelScope.launch(ioDispatcher) {
+            val newId = userProfileRepository.createProfile(name)
+            userProfileRepository.setActiveProfile(newId)
+        }
+    }
+
+    fun deleteProfile(profileId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            userProfileRepository.deleteProfile(profileId)
         }
     }
 
@@ -154,4 +205,17 @@ class SettingsViewModel @Inject constructor(
             )
         }
     }
+
+    private data class ThemeAndPlaybackConfig(
+        val theme: com.devson.vedtube.domain.model.ThemeSettings,
+        val sponsorBlock: Boolean,
+        val skipInterval: Int,
+        val distractionFree: Boolean
+    )
+
+    private data class ProfileConfig(
+        val profiles: List<com.devson.vedtube.domain.model.UserProfile>,
+        val activeId: String,
+        val activeProfile: com.devson.vedtube.domain.model.UserProfile?
+    )
 }

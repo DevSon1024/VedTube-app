@@ -1,16 +1,22 @@
 package com.devson.vedtube.feature.player.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,8 +29,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -58,11 +67,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -71,12 +82,15 @@ import com.devson.vedtube.core.player.PlaybackState
 import com.devson.vedtube.core.player.PlayerEvent
 import com.devson.vedtube.core.player.PlayerState
 import com.devson.vedtube.core.player.RepeatMode
+import com.devson.vedtube.core.player.model.VideoResizeMode
 import com.devson.vedtube.domain.model.VideoStream
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Overlay playback controls with auto-hide timer, interactive seekbar,
- * quality selector, speed selector, queue management, and fullscreen toggles.
+ * quality selector, speed selector, queue management, resize mode cycle,
+ * and double-tap-to-seek gesture recognition with custom skip interval.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,6 +105,10 @@ fun PlayerControls(
     var showQueueSheet by remember { mutableStateOf(false) }
     var showSubtitleSheet by remember { mutableStateOf(false) }
 
+    // Double tap feedback state
+    var doubleTapSide by remember { mutableStateOf<String?>(null) } // "left" or "right"
+    val scope = rememberCoroutineScope()
+
     // Auto-hide controls after 3.5 seconds if playing
     LaunchedEffect(controlsVisible, playerState.isPlaying) {
         if (controlsVisible && playerState.isPlaying) {
@@ -102,11 +120,26 @@ fun PlayerControls(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) {
-                controlsVisible = !controlsVisible
+            .pointerInput(playerState.skipIntervalSeconds) {
+                detectTapGestures(
+                    onTap = {
+                        controlsVisible = !controlsVisible
+                    },
+                    onDoubleTap = { offset ->
+                        val skipMs = (playerState.skipIntervalSeconds * 1000L).coerceAtLeast(5000L)
+                        if (offset.x < size.width / 2) {
+                            onEvent(PlayerEvent.SeekBackward(skipMs))
+                            doubleTapSide = "left"
+                        } else {
+                            onEvent(PlayerEvent.SeekForward(skipMs))
+                            doubleTapSide = "right"
+                        }
+                        scope.launch {
+                            delay(650)
+                            doubleTapSide = null
+                        }
+                    }
+                )
             }
     ) {
         // Buffering / Loading Indicator in center
@@ -136,6 +169,74 @@ fun PlayerControls(
                         color = Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
+        // Double Tap Skip Feedback (Left)
+        AnimatedVisibility(
+            visible = doubleTapSide == "left",
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(start = 32.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.65f),
+                contentColor = Color.White,
+                modifier = Modifier.size(72.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Replay10,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Text(
+                        text = "-${playerState.skipIntervalSeconds}s",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        // Double Tap Skip Feedback (Right)
+        AnimatedVisibility(
+            visible = doubleTapSide == "right",
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 32.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.65f),
+                contentColor = Color.White,
+                modifier = Modifier.size(72.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Forward10,
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Text(
+                        text = "+${playerState.skipIntervalSeconds}s",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -197,6 +298,7 @@ fun PlayerControls(
                     onOpenQueue = { showQueueSheet = true },
                     onOpenSubtitles = { showSubtitleSheet = true },
                     onToggleSubtitles = { onEvent(PlayerEvent.ToggleSubtitles) },
+                    onCycleResizeMode = { onEvent(PlayerEvent.CycleResizeMode) },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
@@ -210,7 +312,7 @@ fun PlayerControls(
                     modifier = Modifier.align(Alignment.Center)
                 )
 
-                // Bottom Bar (Seekbar, Timers, Fullscreen)
+                // Bottom Bar (Seekbar, Timers, Fit Mode, Fullscreen)
                 PlayerBottomBar(
                     playerState = playerState,
                     onEvent = onEvent,
@@ -253,15 +355,19 @@ fun PlayerControls(
                 availableSubtitles = playerState.availableSubtitles,
                 selectedSubtitle = playerState.selectedSubtitle,
                 areSubtitlesEnabled = playerState.areSubtitlesEnabled,
-                onSubtitleSelected = { subtitle ->
-                    onEvent(PlayerEvent.SelectSubtitle(subtitle))
+                onSubtitleSelected = { sub ->
+                    if (sub != null) {
+                        onEvent(PlayerEvent.SelectSubtitle(sub))
+                    } else {
+                        onEvent(PlayerEvent.DisableSubtitles)
+                    }
                     showSubtitleSheet = false
                 },
                 onDismiss = { showSubtitleSheet = false }
             )
         }
 
-        // Queue Management Sheet
+        // Queue Sheet
         if (showQueueSheet) {
             QueueManagementSheet(
                 playerState = playerState,
@@ -280,6 +386,7 @@ private fun PlayerTopBar(
     onOpenQueue: () -> Unit,
     onOpenSubtitles: () -> Unit,
     onToggleSubtitles: () -> Unit,
+    onCycleResizeMode: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -307,6 +414,40 @@ private fun PlayerTopBar(
                 )
             }
         }
+
+        // Fit Mode Toggle Button
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White.copy(alpha = 0.2f),
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onCycleResizeMode)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = when (playerState.resizeMode) {
+                        VideoResizeMode.FIT -> Icons.Default.FitScreen
+                        VideoResizeMode.FILL -> Icons.Default.AspectRatio
+                        VideoResizeMode.ZOOM -> Icons.Default.CropFree
+                    },
+                    contentDescription = "Fit Mode: ${playerState.resizeMode.displayName}",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = playerState.resizeMode.displayName,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
 
         // Subtitles CC Toggle
         if (playerState.availableSubtitles.isNotEmpty()) {
@@ -361,6 +502,8 @@ private fun PlayerCenterControls(
     onEvent: (PlayerEvent) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val skipMs = (playerState.skipIntervalSeconds * 1000L).coerceAtLeast(5000L)
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -382,16 +525,16 @@ private fun PlayerCenterControls(
             )
         }
 
-        // Seek -10s Button
+        // Seek Backward Button
         IconButton(
-            onClick = { onEvent(PlayerEvent.SeekBackward(10_000L)) },
+            onClick = { onEvent(PlayerEvent.SeekBackward(skipMs)) },
             modifier = Modifier
                 .size(44.dp)
                 .background(Color.Black.copy(alpha = 0.4f), CircleShape)
         ) {
             Icon(
                 imageVector = Icons.Default.Replay10,
-                contentDescription = "Seek -10s",
+                contentDescription = "Seek -${playerState.skipIntervalSeconds}s",
                 tint = Color.White,
                 modifier = Modifier.size(28.dp)
             )
@@ -423,16 +566,16 @@ private fun PlayerCenterControls(
             )
         }
 
-        // Seek +10s Button
+        // Seek Forward Button
         IconButton(
-            onClick = { onEvent(PlayerEvent.SeekForward(10_000L)) },
+            onClick = { onEvent(PlayerEvent.SeekForward(skipMs)) },
             modifier = Modifier
                 .size(44.dp)
                 .background(Color.Black.copy(alpha = 0.4f), CircleShape)
         ) {
             Icon(
                 imageVector = Icons.Default.Forward10,
-                contentDescription = "Seek +10s",
+                contentDescription = "Seek +${playerState.skipIntervalSeconds}s",
                 tint = Color.White,
                 modifier = Modifier.size(28.dp)
             )

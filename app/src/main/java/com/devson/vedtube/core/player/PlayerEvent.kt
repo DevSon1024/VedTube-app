@@ -40,6 +40,7 @@ sealed interface PlayerEvent {
 
     data class SelectQuality(val quality: VideoStream) : PlayerEvent
     data object ToggleSubtitles : PlayerEvent
+    data object DisableSubtitles : PlayerEvent
     data class SelectSubtitle(val subtitle: com.devson.vedtube.domain.model.SubtitleTrack?) : PlayerEvent
     data object DismissSponsorNotification : PlayerEvent
 
@@ -55,6 +56,9 @@ sealed interface PlayerEvent {
 
     data class SetFullscreen(val fullscreen: Boolean) : PlayerEvent
     data object ToggleFullscreen : PlayerEvent
+
+    data class SetResizeMode(val mode: com.devson.vedtube.core.player.model.VideoResizeMode) : PlayerEvent
+    data object CycleResizeMode : PlayerEvent
 
     data object Retry : PlayerEvent
     data object Stop : PlayerEvent

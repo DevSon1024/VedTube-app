@@ -9,7 +9,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.foundation.layout.Arrangement
@@ -32,13 +36,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.PlaylistAdd
-import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
@@ -150,7 +154,8 @@ fun VideoDetailsScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 VideoPlayerSurface(
                     exoPlayer = viewModel.vedPlayer.exoPlayer,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    resizeMode = playerState.resizeMode.exoResizeMode
                 )
                 PlayerControls(
                     playerState = playerState,
@@ -170,7 +175,8 @@ fun VideoDetailsScreen(
                 ) {
                     VideoPlayerSurface(
                         exoPlayer = viewModel.vedPlayer.exoPlayer,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        resizeMode = playerState.resizeMode.exoResizeMode
                     )
                     PlayerControls(
                         playerState = playerState,
@@ -311,182 +317,228 @@ fun VideoDetailsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (!avatarUrl.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(avatarUrl)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = channelName,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(42.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primaryContainer),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = channelName.firstOrNull()?.uppercase() ?: "C",
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column {
+                            if (!avatarUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(avatarUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = channelName,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(
-                                        text = channelName,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold
+                                        text = channelName.firstOrNull()?.uppercase() ?: "C",
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
                                     )
-                                    val subscribers = FormatUtils.formatSubscriberCount(uiState.details?.subscriberCount)
-                                    if (subscribers.isNotBlank()) {
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = channelName,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val subscribers = FormatUtils.formatSubscriberCount(uiState.details?.subscriberCount)
+                                if (subscribers.isNotBlank()) {
+                                    Text(
+                                        text = subscribers,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Action Buttons Row (Likes / RYD Dislikes, Subscribe, Download, Save)
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Likes & RYD Dislikes Pill
+                            val likes = uiState.details?.likeCount ?: 0L
+                            val dislikes = uiState.dislikesCount
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ThumbUp,
+                                        contentDescription = "Likes",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (likes > 0) FormatUtils.formatCompactNumber(likes) else "Like",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    if (dislikes != null && dislikes > 0) {
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Box(
+                                            modifier = Modifier
+                                                .height(14.dp)
+                                                .width(1.dp)
+                                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
+                                        )
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.ThumbDown,
+                                            contentDescription = "Dislikes",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = subscribers,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            text = FormatUtils.formatCompactNumber(dislikes),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
                             }
 
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Subscribe Button
-                                if (uiState.isSubscribed) {
-                                    Button(
-                                        onClick = { viewModel.toggleSubscription() },
+                            // Subscribe Button
+                            if (uiState.isSubscribed) {
+                                Button(
+                                    onClick = { viewModel.toggleSubscription() },
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Subscribed", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                }
+                            } else {
+                                Button(
+                                    onClick = { viewModel.toggleSubscription() },
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                }
+                            }
+
+                            // Download Action Button
+                            val downloadItem = uiState.downloadItem
+                            when {
+                                downloadItem != null && downloadItem.isCompleted -> {
+                                    FilledTonalButton(
+                                        onClick = { /* Already downloaded */ },
                                         shape = RoundedCornerShape(20.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
+                                            contentDescription = "Downloaded",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Downloaded", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                                downloadItem != null && downloadItem.isDownloading -> {
+                                    FilledTonalButton(
+                                        onClick = { /* In progress */ },
+                                        shape = RoundedCornerShape(20.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            progress = { downloadItem.progressFraction },
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Subscribed", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                                    }
-                                } else {
-                                    Button(
-                                        onClick = { viewModel.toggleSubscription() },
-                                        shape = RoundedCornerShape(20.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                            contentColor = MaterialTheme.colorScheme.onPrimary
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
-                                    ) {
-                                        Text("Subscribe", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                        Text("${downloadItem.progress}%", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                     }
                                 }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                // Download Action Button
-                                val downloadItem = uiState.downloadItem
-                                when {
-                                    downloadItem != null && downloadItem.isCompleted -> {
-                                        FilledTonalButton(
-                                            onClick = { /* Already downloaded */ },
-                                            shape = RoundedCornerShape(20.dp),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Downloaded",
+                                else -> {
+                                    FilledTonalButton(
+                                        onClick = { viewModel.onDownloadClick() },
+                                        enabled = !uiState.isLoadingDownloadStreams,
+                                        shape = RoundedCornerShape(20.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                    ) {
+                                        if (uiState.isLoadingDownloadStreams) {
+                                            CircularProgressIndicator(
                                                 modifier = Modifier.size(16.dp),
-                                                tint = MaterialTheme.colorScheme.primary
+                                                strokeWidth = 2.dp
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.Download,
+                                                contentDescription = "Download",
+                                                modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Downloaded", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                        }
-                                    }
-                                    downloadItem != null && downloadItem.isDownloading -> {
-                                        FilledTonalButton(
-                                            onClick = { /* In progress */ },
-                                            shape = RoundedCornerShape(20.dp),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            CircularProgressIndicator(
-                                                progress = { downloadItem.progressFraction },
-                                                modifier = Modifier.size(16.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text("${downloadItem.progress}%", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                        }
-                                    }
-                                    else -> {
-                                        FilledTonalButton(
-                                            onClick = { viewModel.onDownloadClick() },
-                                            enabled = !uiState.isLoadingDownloadStreams,
-                                            shape = RoundedCornerShape(20.dp),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            if (uiState.isLoadingDownloadStreams) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(16.dp),
-                                                    strokeWidth = 2.dp
-                                                )
-                                            } else {
-                                                Icon(
-                                                    imageVector = Icons.Default.Download,
-                                                    contentDescription = "Download",
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                Text("Download", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                            }
+                                            Text("Download", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                 }
+                            }
 
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                // Save to Playlist Button
-                                val isSavedToAny = uiState.containingPlaylistIds.isNotEmpty()
-                                FilledTonalButton(
-                                    onClick = { viewModel.openSaveToPlaylist() },
-                                    shape = RoundedCornerShape(20.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isSavedToAny) Icons.Default.PlaylistAddCheck else Icons.Default.PlaylistAdd,
-                                        contentDescription = "Save to Playlist",
-                                        modifier = Modifier.size(16.dp),
-                                        tint = if (isSavedToAny) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (isSavedToAny) "Saved" else "Save",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
+                            // Save to Playlist Button
+                            val isSavedToAny = uiState.containingPlaylistIds.isNotEmpty()
+                            FilledTonalButton(
+                                onClick = { viewModel.openSaveToPlaylist() },
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSavedToAny) Icons.AutoMirrored.Filled.PlaylistAddCheck else Icons.AutoMirrored.Filled.PlaylistAdd,
+                                    contentDescription = "Save to Playlist",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (isSavedToAny) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isSavedToAny) "Saved" else "Save",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                     }
@@ -553,144 +605,183 @@ fun VideoDetailsScreen(
                         }
                     }
 
-                    // Comments Preview Box
-                    item {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { viewModel.openComments() }
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
+                    if (uiState.isDistractionFreeMode) {
+                        // Distraction-Free Mode Banner
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "Comments",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        val count = uiState.totalCommentsCount ?: uiState.comments.size.toLong().takeIf { it > 0 }
-                                        if (count != null) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = FormatUtils.formatCompactNumber(count),
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
                                     Icon(
-                                        imageVector = Icons.Default.ExpandMore,
-                                        contentDescription = "Open comments",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        imageVector = Icons.Default.VisibilityOff,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
-                                }
-
-                                val firstComment = uiState.comments.firstOrNull()
-                                if (firstComment != null) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        if (!firstComment.authorAvatarUrl.isNullOrBlank()) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(context)
-                                                    .data(firstComment.authorAvatarUrl)
-                                                    .crossfade(true)
-                                                    .build(),
-                                                contentDescription = firstComment.authorName,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .clip(CircleShape)
-                                            )
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MaterialTheme.colorScheme.primaryContainer),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = firstComment.authorName.firstOrNull()?.uppercase() ?: "A",
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
                                         Text(
-                                            text = firstComment.commentText,
+                                            text = "Distraction-Free Mode Active",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "Comments and recommendations are hidden",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
-                                } else if (uiState.isLoadingComments) {
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "Loading comments...",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
                             }
                         }
-                    }
-
-                    // Related Videos Header
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Related Videos",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
-                    }
-
-                    // Related Videos List
-                    val related = uiState.details?.relatedVideos.orEmpty()
-                    if (related.isNotEmpty()) {
-                        itemsIndexed(
-                            items = related,
-                            key = { index, relatedVideo -> "related_${relatedVideo.id}_$index" }
-                        ) { _, relatedVideo ->
-                            VideoCard(
-                                video = relatedVideo,
-                                watchProgressFraction = uiState.watchProgressMap[relatedVideo.id],
-                                onClick = { viewModel.onRelatedVideoClick(relatedVideo) }
-                            )
-                        }
-                    } else if (uiState.isLoadingDetails) {
-                        items(3) {
-                            VideoCardShimmer()
-                        }
                     } else {
+                        // Comments Preview Box
                         item {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable { viewModel.openComments() }
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Comments",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            val count = uiState.totalCommentsCount ?: uiState.comments.size.toLong().takeIf { it > 0 }
+                                            if (count != null) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Text(
+                                                    text = FormatUtils.formatCompactNumber(count),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.ExpandMore,
+                                            contentDescription = "Open comments",
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+
+                                    val firstComment = uiState.comments.firstOrNull()
+                                    if (firstComment != null) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            if (!firstComment.authorAvatarUrl.isNullOrBlank()) {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context)
+                                                        .data(firstComment.authorAvatarUrl)
+                                                        .crossfade(true)
+                                                        .build(),
+                                                    contentDescription = firstComment.authorName,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .size(24.dp)
+                                                        .clip(CircleShape)
+                                                )
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(24.dp)
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = firstComment.authorName.firstOrNull()?.uppercase() ?: "A",
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = firstComment.commentText,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    } else if (uiState.isLoadingComments) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "Loading comments...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Related Videos Header
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "No related videos available",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 12.dp)
+                                text = "Related Videos",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
+                        }
+
+                        // Related Videos List
+                        val related = uiState.details?.relatedVideos.orEmpty()
+                        if (related.isNotEmpty()) {
+                            itemsIndexed(
+                                items = related,
+                                key = { index, relatedVideo -> "related_${relatedVideo.id}_$index" }
+                            ) { _, relatedVideo ->
+                                VideoCard(
+                                    video = relatedVideo,
+                                    watchProgressFraction = uiState.watchProgressMap[relatedVideo.id],
+                                    onClick = { viewModel.onRelatedVideoClick(relatedVideo) }
+                                )
+                            }
+                        } else if (uiState.isLoadingDetails) {
+                            items(3) {
+                                VideoCardShimmer()
+                            }
+                        } else {
+                            item {
+                                Text(
+                                    text = "No related videos available",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                )
+                            }
                         }
                     }
                 }

@@ -52,7 +52,9 @@ data class PlayerState(
     val sponsorNotification: String? = null,
     val queue: List<Video> = emptyList(),
     val currentQueueIndex: Int = -1,
-    val isFullscreen: Boolean = false
+    val isFullscreen: Boolean = false,
+    val resizeMode: com.devson.vedtube.core.player.model.VideoResizeMode = com.devson.vedtube.core.player.model.VideoResizeMode.FIT,
+    val skipIntervalSeconds: Int = 10
 ) {
     val isPlaying: Boolean
         get() = playbackState is PlaybackState.Playing

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,16 +28,18 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SwitchAccount
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +48,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,11 +62,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devson.vedtube.core.datastore.model.AppThemeConfig
+import com.devson.vedtube.feature.profile.ui.ProfileSwitchBottomSheet
 import com.devson.vedtube.feature.settings.SettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -78,6 +84,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     var showClearAllConfirmDialog by remember { mutableStateOf(false) }
+    var showProfileBottomSheet by remember { mutableStateOf(false) }
 
     // SAF Document Creator (Export JSON)
     val exportLauncher = rememberLauncherForActivityResult(
@@ -149,12 +156,23 @@ fun SettingsScreen(
         }
     }
 
+    if (showProfileBottomSheet) {
+        ProfileSwitchBottomSheet(
+            profiles = uiState.profiles,
+            activeProfileId = uiState.activeProfileId,
+            onSelectProfile = { viewModel.setActiveProfile(it) },
+            onCreateProfile = { viewModel.createProfile(it) },
+            onDeleteProfile = { viewModel.deleteProfile(it) },
+            onDismiss = { showProfileBottomSheet = false }
+        )
+    }
+
     if (showClearAllConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllConfirmDialog = false },
             title = { Text("Erase all local data?") },
             text = {
-                Text("This will permanently delete your Watch History, Subscriptions, Custom Playlists, and Search History. This action cannot be reversed.")
+                Text("This will permanently delete your Watch History, Subscriptions, Custom Playlists, and Search History across all profiles. This action cannot be reversed.")
             },
             confirmButton = {
                 TextButton(
@@ -198,8 +216,71 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp)
         ) {
-            // Theme & Appearance Section
+            // User Profile Section
             item {
+                Text(
+                    text = "User Profile",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showProfileBottomSheet = true }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .padding(8.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            val activeName = uiState.activeProfile?.name ?: "Default Profile"
+                            Text(
+                                text = activeName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Tap to switch or manage local profiles",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.SwitchAccount,
+                            contentDescription = "Switch Profiles",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            // Appearance Section
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "Appearance",
                     style = MaterialTheme.typography.titleMedium,
@@ -259,11 +340,11 @@ fun SettingsScreen(
                 }
             }
 
-            // Playback & SponsorBlock Section
+            // Player & Controls Section
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Player & Integrations",
+                    text = "Player & Playback Controls",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -275,30 +356,94 @@ fun SettingsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "SponsorBlock",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Automatically skip sponsor segments and promotional intros",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        // Double-tap seek interval
+                        Text(
+                            text = "Double-Tap Skip Interval",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Seconds skipped per double-tap gesture on player sides",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            listOf(5, 10, 15, 30).forEach { seconds ->
+                                FilterChip(
+                                    selected = uiState.skipIntervalSeconds == seconds,
+                                    onClick = { viewModel.setSkipIntervalSeconds(seconds) },
+                                    label = { Text("${seconds}s", fontWeight = FontWeight.SemiBold) },
+                                    leadingIcon = if (uiState.skipIntervalSeconds == seconds) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    } else null
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 14.dp))
+
+                        // Distraction-Free Mode
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Distraction-Free Mode",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Hide comments and recommended videos on video details screen",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.isDistractionFreeMode,
+                                onCheckedChange = { viewModel.setDistractionFreeMode(it) }
                             )
                         }
-                        Switch(
-                            checked = uiState.isSponsorBlockEnabled,
-                            onCheckedChange = { viewModel.setSponsorBlockEnabled(it) }
-                        )
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 14.dp))
+
+                        // SponsorBlock
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "SponsorBlock Auto-Skip",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Automatically skip sponsor segments and promotional intros",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = uiState.isSponsorBlockEnabled,
+                                onCheckedChange = { viewModel.setSponsorBlockEnabled(it) }
+                            )
+                        }
                     }
                 }
             }
@@ -355,22 +500,22 @@ fun SettingsScreen(
                             }
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         // Import Button
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable(enabled = !uiState.isImporting) {
-                                    importLauncher.launch(arrayOf("application/json"))
+                                    importLauncher.launch(arrayOf("application/json", "text/*"))
                                 }
                                 .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Download,
+                                imageVector = Icons.Default.FileDownload,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(16.dp))
@@ -391,9 +536,9 @@ fun SettingsScreen(
                             }
                         }
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                        // Clear All Data
+                        // Clear All Local Data
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -418,13 +563,13 @@ fun SettingsScreen(
                                     color = MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    text = "Erase all history, subscriptions, custom playlists, and searches",
+                                    text = "Permanently wipe all history, subscriptions, playlists & search logs",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             if (uiState.isClearingData) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.error)
                             }
                         }
                     }
@@ -443,15 +588,16 @@ private fun ThemeOptionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 6.dp),
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
         RadioButton(
             selected = selected,

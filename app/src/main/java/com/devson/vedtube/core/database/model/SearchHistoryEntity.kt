@@ -1,14 +1,16 @@
 package com.devson.vedtube.core.database.model
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
 /**
- * Room Entity representing a recorded search query.
+ * Room Entity representing a recorded search query, isolated per user profile.
  */
-@Entity(tableName = "search_history")
+@Entity(
+    tableName = "search_history",
+    primaryKeys = ["profileId", "query"]
+)
 data class SearchHistoryEntity(
-    @PrimaryKey
     val query: String,
+    val profileId: String = "profile_default",
     val timestamp: Long = System.currentTimeMillis()
 )

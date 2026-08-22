@@ -138,6 +138,7 @@ class VedPlayerImpl @Inject constructor(
             is PlayerEvent.ToggleShuffle -> toggleShuffle()
             is PlayerEvent.SelectQuality -> selectQuality(event.quality)
             is PlayerEvent.ToggleSubtitles -> toggleSubtitles()
+            is PlayerEvent.DisableSubtitles -> selectSubtitle(null)
             is PlayerEvent.SelectSubtitle -> selectSubtitle(event.subtitle)
             is PlayerEvent.DismissSponsorNotification -> dismissSponsorNotification()
             is PlayerEvent.Next -> next()
@@ -150,6 +151,8 @@ class VedPlayerImpl @Inject constructor(
             is PlayerEvent.PlayQueueIndex -> playQueueIndex(event.index)
             is PlayerEvent.SetFullscreen -> setFullscreen(event.fullscreen)
             is PlayerEvent.ToggleFullscreen -> toggleFullscreen()
+            is PlayerEvent.SetResizeMode -> setResizeMode(event.mode)
+            is PlayerEvent.CycleResizeMode -> cycleResizeMode()
             is PlayerEvent.Retry -> retry()
             is PlayerEvent.Stop -> stop()
             is PlayerEvent.Release -> release()
@@ -385,6 +388,18 @@ class VedPlayerImpl @Inject constructor(
 
     override fun toggleFullscreen() {
         _playerState.update { it.copy(isFullscreen = !it.isFullscreen) }
+    }
+
+    override fun setResizeMode(mode: com.devson.vedtube.core.player.model.VideoResizeMode) {
+        _playerState.update { it.copy(resizeMode = mode) }
+    }
+
+    override fun cycleResizeMode() {
+        _playerState.update { it.copy(resizeMode = it.resizeMode.next()) }
+    }
+
+    override fun setSkipInterval(seconds: Int) {
+        _playerState.update { it.copy(skipIntervalSeconds = seconds) }
     }
 
     override fun retry() {

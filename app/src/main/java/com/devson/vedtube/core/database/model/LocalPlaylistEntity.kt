@@ -4,12 +4,13 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Room Entity representing a custom local user playlist.
+ * Room Entity representing a custom local user playlist, scoped per user profile.
  */
 @Entity(tableName = "local_playlists")
 data class LocalPlaylistEntity(
     @PrimaryKey
     val playlistId: String,
+    val profileId: String = "profile_default",
     val name: String,
     val createdAt: Long = System.currentTimeMillis()
 )

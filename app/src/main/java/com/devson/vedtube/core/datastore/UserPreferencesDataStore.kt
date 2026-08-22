@@ -24,6 +24,9 @@ class UserPreferencesDataStore @Inject constructor(
         val THEME_CONFIG = stringPreferencesKey("theme_config")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val SPONSORBLOCK_ENABLED = booleanPreferencesKey("sponsorblock_enabled")
+        val SKIP_INTERVAL_SECONDS = androidx.datastore.preferences.core.intPreferencesKey("skip_interval_seconds")
+        val DISTRACTION_FREE_MODE = booleanPreferencesKey("distraction_free_mode")
+        val ACTIVE_PROFILE_ID = stringPreferencesKey("active_profile_id")
     }
 
     val themeSettings: Flow<ThemeSettings> = dataStore.data
@@ -60,6 +63,42 @@ class UserPreferencesDataStore @Inject constructor(
             preferences[PreferencesKeys.SPONSORBLOCK_ENABLED] ?: true
         }
 
+    val skipIntervalSeconds: Flow<Int> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.SKIP_INTERVAL_SECONDS] ?: 10
+        }
+
+    val distractionFreeMode: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.DISTRACTION_FREE_MODE] ?: false
+        }
+
+    val activeProfileId: Flow<String> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.ACTIVE_PROFILE_ID] ?: "profile_default"
+        }
+
     suspend fun setThemeConfig(themeConfig: AppThemeConfig) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_CONFIG] = themeConfig.name
@@ -75,6 +114,24 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setSponsorBlockEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.SPONSORBLOCK_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSkipIntervalSeconds(seconds: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SKIP_INTERVAL_SECONDS] = seconds
+        }
+    }
+
+    suspend fun setDistractionFreeMode(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DISTRACTION_FREE_MODE] = enabled
+        }
+    }
+
+    suspend fun setActiveProfileId(profileId: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ACTIVE_PROFILE_ID] = profileId
         }
     }
 }
