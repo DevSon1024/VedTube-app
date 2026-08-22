@@ -360,6 +360,52 @@ fun LibraryScreen(
                 }
             }
         }
+
+        // Settings Section (SponsorBlock & Playback)
+        item {
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Preferences",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "SponsorBlock Auto-Skip",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Automatically skip sponsored segments and intros in videos",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    androidx.compose.material3.Switch(
+                        checked = uiState.isSponsorBlockEnabled,
+                        onCheckedChange = { viewModel.toggleSponsorBlock(it) }
+                    )
+                }
+            }
+        }
     }
 }
 

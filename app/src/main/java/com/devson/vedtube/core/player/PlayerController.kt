@@ -23,6 +23,9 @@ interface PlayerController {
     fun setShuffle(enabled: Boolean)
     fun toggleShuffle(): Boolean
     fun selectQuality(quality: VideoStream)
+    fun toggleSubtitles(): Boolean
+    fun selectSubtitle(subtitle: com.devson.vedtube.domain.model.SubtitleTrack?)
+    fun dismissSponsorNotification()
     fun next()
     fun previous()
     fun playVideo(video: Video, preferences: PlaybackPreferences = PlaybackPreferences())

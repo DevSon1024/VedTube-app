@@ -140,6 +140,35 @@ object YoutubeMapper {
         )
     }
 
+    fun mapCommentsInfoToPagedResult(
+        commentsInfo: org.schabi.newpipe.extractor.comments.CommentsInfo
+    ): PagedResult<com.devson.vedtube.domain.model.Comment> {
+        val comments = commentsInfo.relatedItems.orEmpty().mapNotNull { item ->
+            if (item is org.schabi.newpipe.extractor.comments.CommentsInfoItem) {
+                val avatar = item.uploaderAvatars.orEmpty().maxByOrNull { it.width }?.url
+                    ?: item.uploaderAvatars.orEmpty().firstOrNull()?.url
+                    ?: item.thumbnails.orEmpty().firstOrNull()?.url
+                com.devson.vedtube.domain.model.Comment(
+                    id = item.commentId ?: item.url ?: java.util.UUID.randomUUID().toString(),
+                    authorName = item.uploaderName.orEmpty().ifBlank { "Anonymous" },
+                    authorAvatarUrl = avatar,
+                    commentText = item.commentText?.content ?: item.name ?: "",
+                    likeCount = if (item.likeCount >= 0) item.likeCount.toLong() else 0L,
+                    publishDate = item.textualUploadDate,
+                    replyCount = if (item.replyCount >= 0) item.replyCount else 0
+                )
+            } else {
+                null
+            }
+        }
+        val nextPageToken = if (commentsInfo.hasNextPage()) commentsInfo.nextPage?.url ?: commentsInfo.nextPage?.id else null
+        return PagedResult(
+            items = comments,
+            nextPageToken = nextPageToken,
+            totalResults = commentsInfo.commentsCount.toLong().takeIf { it >= 0 }
+        )
+    }
+
     private fun extractVideoId(url: String?, fallbackId: String?): String {
         if (!fallbackId.isNullOrBlank()) {
             return fallbackId

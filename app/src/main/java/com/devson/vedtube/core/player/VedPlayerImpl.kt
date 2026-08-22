@@ -45,6 +45,8 @@ class VedPlayerImpl @Inject constructor(
     override val queueManager: QueueManager,
     private val playerErrorMapper: PlayerErrorMapper,
     private val watchHistoryRepository: WatchHistoryRepository,
+    private val sponsorBlockRepository: com.devson.vedtube.domain.repository.SponsorBlockRepository,
+    private val settingsRepository: com.devson.vedtube.domain.repository.SettingsRepository,
     @Dispatcher(VedTubeDispatchers.Main) private val mainDispatcher: CoroutineDispatcher,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : VedPlayer {
@@ -56,8 +58,12 @@ class VedPlayerImpl @Inject constructor(
 
     private var positionTickerJob: Job? = null
     private var resolveJob: Job? = null
+    private var sponsorNotificationJob: Job? = null
 
     private var activePlaybackSource: PlaybackSource? = null
+    private var activeSponsorSegments: List<com.devson.vedtube.domain.model.SponsorSegment> = emptyList()
+    private val skippedSegmentsForCurrentPlayback = mutableSetOf<String>()
+    private var isSponsorBlockSettingEnabled = true
     private var lastSavedVolume: Float = 1.0f
     private var lastSavedHistoryTimestamp = 0L
 
@@ -107,6 +113,10 @@ class VedPlayerImpl @Inject constructor(
         queueManager.repeatMode.onEach { repeat ->
             _playerState.update { it.copy(repeatMode = repeat) }
         }.launchIn(playerScope)
+
+        settingsRepository.sponsorBlockEnabled.onEach { enabled ->
+            isSponsorBlockSettingEnabled = enabled
+        }.launchIn(playerScope)
     }
 
     override fun handleEvent(event: PlayerEvent) {
@@ -127,6 +137,9 @@ class VedPlayerImpl @Inject constructor(
             is PlayerEvent.SetShuffle -> setShuffle(event.enabled)
             is PlayerEvent.ToggleShuffle -> toggleShuffle()
             is PlayerEvent.SelectQuality -> selectQuality(event.quality)
+            is PlayerEvent.ToggleSubtitles -> toggleSubtitles()
+            is PlayerEvent.SelectSubtitle -> selectSubtitle(event.subtitle)
+            is PlayerEvent.DismissSponsorNotification -> dismissSponsorNotification()
             is PlayerEvent.Next -> next()
             is PlayerEvent.Previous -> previous()
             is PlayerEvent.Enqueue -> enqueue(event.video)
@@ -239,6 +252,59 @@ class VedPlayerImpl @Inject constructor(
             exoPlayer.play()
         }
         _playerState.update { it.copy(selectedQuality = quality) }
+    }
+
+    override fun toggleSubtitles(): Boolean {
+        val current = _playerState.value
+        val newEnabled = !current.areSubtitlesEnabled
+        val targetSub = current.selectedSubtitle ?: current.availableSubtitles.firstOrNull()
+        applySubtitleSelection(newEnabled, targetSub)
+        return newEnabled
+    }
+
+    override fun selectSubtitle(subtitle: com.devson.vedtube.domain.model.SubtitleTrack?) {
+        if (subtitle == null) {
+            applySubtitleSelection(false, null)
+        } else {
+            applySubtitleSelection(true, subtitle)
+        }
+    }
+
+    override fun dismissSponsorNotification() {
+        sponsorNotificationJob?.cancel()
+        _playerState.update { it.copy(sponsorNotification = null) }
+    }
+
+    private fun applySubtitleSelection(
+        enabled: Boolean,
+        subtitle: com.devson.vedtube.domain.model.SubtitleTrack?
+    ) {
+        val builder = exoPlayer.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, !enabled)
+
+        if (enabled && subtitle != null) {
+            builder.setPreferredTextLanguage(subtitle.languageCode)
+        } else if (!enabled) {
+            builder.setPreferredTextLanguage(null)
+        }
+
+        exoPlayer.trackSelectionParameters = builder.build()
+
+        _playerState.update {
+            it.copy(
+                areSubtitlesEnabled = enabled,
+                selectedSubtitle = if (enabled) subtitle else it.selectedSubtitle
+            )
+        }
+    }
+
+    private fun showSponsorNotification(message: String) {
+        sponsorNotificationJob?.cancel()
+        _playerState.update { it.copy(sponsorNotification = message) }
+        sponsorNotificationJob = playerScope.launch {
+            delay(3000)
+            _playerState.update { it.copy(sponsorNotification = null) }
+        }
     }
 
     override fun next() {
@@ -354,6 +420,9 @@ class VedPlayerImpl @Inject constructor(
     ) {
         resolveJob?.cancel()
         stopPositionTicker()
+        sponsorNotificationJob?.cancel()
+        skippedSegmentsForCurrentPlayback.clear()
+        activeSponsorSegments = emptyList()
 
         _playerState.update { current ->
             current.copy(
@@ -363,7 +432,12 @@ class VedPlayerImpl @Inject constructor(
                 bufferedPositionMs = 0L,
                 durationMs = if (video.durationSeconds > 0) video.durationSeconds * 1000L else 0L,
                 availableQualities = emptyList(),
-                selectedQuality = null
+                selectedQuality = null,
+                availableSubtitles = emptyList(),
+                selectedSubtitle = null,
+                areSubtitlesEnabled = false,
+                sponsorBlockSegments = emptyList(),
+                sponsorNotification = null
             )
         }
 
@@ -376,6 +450,8 @@ class VedPlayerImpl @Inject constructor(
                 onSuccess = { source ->
                     activePlaybackSource = source
                     val selectedStream = source.selectBestStream(preferences)
+                    val subtitles = source.subtitles
+                    val defaultSubtitle = subtitles.firstOrNull()
 
                     _playerState.update { current ->
                         current.copy(
@@ -383,8 +459,18 @@ class VedPlayerImpl @Inject constructor(
                             playbackState = PlaybackState.Preparing,
                             availableQualities = source.streams,
                             selectedQuality = selectedStream,
+                            availableSubtitles = subtitles,
+                            selectedSubtitle = defaultSubtitle,
+                            areSubtitlesEnabled = false,
                             durationMs = source.durationMs ?: current.durationMs
                         )
+                    }
+
+                    // Fetch SponsorBlock segments in background
+                    playerScope.launch(ioDispatcher) {
+                        val segments = sponsorBlockRepository.getSegments(video.id)
+                        activeSponsorSegments = segments
+                        _playerState.update { it.copy(sponsorBlockSegments = segments) }
                     }
 
                     try {
@@ -506,6 +592,23 @@ class VedPlayerImpl @Inject constructor(
                         durationMs = if (dur > 0) dur else current.durationMs,
                         bufferedPositionMs = buf
                     )
+                }
+
+                // Check SponsorBlock segments auto-skip
+                if (isSponsorBlockSettingEnabled && activeSponsorSegments.isNotEmpty()) {
+                    val matchingSegment = activeSponsorSegments.firstOrNull { segment ->
+                        pos >= segment.startMs && pos < segment.endMs && (segment.endMs - pos) > 300L
+                    }
+                    if (matchingSegment != null) {
+                        val segmentKey = "${matchingSegment.startMs}_${matchingSegment.endMs}"
+                        if (!skippedSegmentsForCurrentPlayback.contains(segmentKey)) {
+                            skippedSegmentsForCurrentPlayback.add(segmentKey)
+                            exoPlayer.seekTo(matchingSegment.endMs)
+                            updatePositionImmediately(matchingSegment.endMs)
+                            val categoryName = matchingSegment.category.replaceFirstChar { it.uppercase() }
+                            showSponsorNotification("Skipped $categoryName")
+                        }
+                    }
                 }
 
                 val now = System.currentTimeMillis()

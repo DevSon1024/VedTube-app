@@ -39,6 +39,9 @@ sealed interface PlayerEvent {
     data object ToggleShuffle : PlayerEvent
 
     data class SelectQuality(val quality: VideoStream) : PlayerEvent
+    data object ToggleSubtitles : PlayerEvent
+    data class SelectSubtitle(val subtitle: com.devson.vedtube.domain.model.SubtitleTrack?) : PlayerEvent
+    data object DismissSponsorNotification : PlayerEvent
 
     data object Next : PlayerEvent
     data object Previous : PlayerEvent

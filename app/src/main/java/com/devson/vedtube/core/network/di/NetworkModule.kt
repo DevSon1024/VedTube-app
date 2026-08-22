@@ -125,6 +125,8 @@ object NetworkModule {
             .create(PipedApiService::class.java)
     }
 
+    private const val SPONSORBLOCK_BASE_URL = "https://sponsor.ajay.app/"
+
     @Provides
     @Singleton
     fun providesCobaltApiService(
@@ -138,5 +140,20 @@ object NetworkModule {
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
             .create(CobaltApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun providesSponsorBlockApiService(
+        okHttpClient: OkHttpClient,
+        json: Json
+    ): com.devson.vedtube.data.provider.sponsorblock.SponsorBlockApiService {
+        val contentType = "application/json".toMediaType()
+        return Retrofit.Builder()
+            .baseUrl(SPONSORBLOCK_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(json.asConverterFactory(contentType))
+            .build()
+            .create(com.devson.vedtube.data.provider.sponsorblock.SponsorBlockApiService::class.java)
     }
 }

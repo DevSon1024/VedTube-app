@@ -39,4 +39,10 @@ abstract class RepositoryModule {
     abstract fun bindDownloadRepository(
         downloadRepositoryImpl: com.devson.vedtube.data.repository.DownloadRepositoryImpl
     ): com.devson.vedtube.domain.repository.DownloadRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSponsorBlockRepository(
+        sponsorBlockRepositoryImpl: com.devson.vedtube.data.repository.SponsorBlockRepositoryImpl
+    ): com.devson.vedtube.domain.repository.SponsorBlockRepository
 }

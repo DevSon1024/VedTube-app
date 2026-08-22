@@ -57,4 +57,13 @@ class NewPipeExtractorDataSource @Inject constructor(
         }
         return PlaylistInfo.getInfo(ServiceList.YouTube, url)
     }
+
+    override suspend fun extractComments(videoId: String, pageToken: String?): org.schabi.newpipe.extractor.comments.CommentsInfo {
+        val url = if (videoId.startsWith("http://") || videoId.startsWith("https://")) {
+            videoId
+        } else {
+            "https://www.youtube.com/watch?v=$videoId"
+        }
+        return org.schabi.newpipe.extractor.comments.CommentsInfo.getInfo(ServiceList.YouTube, url)
+    }
 }

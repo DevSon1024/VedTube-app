@@ -69,7 +69,14 @@ class VideoDetailsViewModel @Inject constructor(
                 videoId = videoId,
                 isLoadingDetails = true,
                 error = null,
-                isDescriptionExpanded = false
+                isDescriptionExpanded = false,
+                comments = emptyList(),
+                commentsNextPageToken = null,
+                isLoadingComments = false,
+                isLoadingMoreComments = false,
+                commentsError = null,
+                totalCommentsCount = null,
+                isCommentsSheetVisible = false
             )
         }
 
@@ -103,6 +110,7 @@ class VideoDetailsViewModel @Inject constructor(
                     )
                 }
                 observeSubscription(details.uploaderId ?: details.uploaderName)
+                loadComments(videoId)
             }.onFailure { err ->
                 val fallbackDetails = initialVideo?.let { v ->
                     VideoDetails(
@@ -258,6 +266,85 @@ class VideoDetailsViewModel @Inject constructor(
 
     fun toggleDescription() {
         _uiState.update { it.copy(isDescriptionExpanded = !it.isDescriptionExpanded) }
+    }
+
+    fun openComments() {
+        _uiState.update { it.copy(isCommentsSheetVisible = true) }
+        if (_uiState.value.comments.isEmpty() && !_uiState.value.isLoadingComments) {
+            val videoId = _uiState.value.videoId
+            if (videoId.isNotBlank()) {
+                loadComments(videoId)
+            }
+        }
+    }
+
+    fun dismissComments() {
+        _uiState.update { it.copy(isCommentsSheetVisible = false) }
+    }
+
+    fun loadComments(videoId: String) {
+        _uiState.update {
+            it.copy(
+                isLoadingComments = true,
+                commentsError = null
+            )
+        }
+
+        viewModelScope.launch {
+            val result = withContext(ioDispatcher) {
+                mediaProvider.getComments(videoId, pageToken = null)
+            }
+
+            result.onSuccess { pagedComments ->
+                _uiState.update {
+                    it.copy(
+                        comments = pagedComments.items,
+                        commentsNextPageToken = pagedComments.nextPageToken,
+                        totalCommentsCount = pagedComments.totalResults,
+                        isLoadingComments = false,
+                        commentsError = null
+                    )
+                }
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(
+                        isLoadingComments = false,
+                        commentsError = err.message ?: "Failed to load comments"
+                    )
+                }
+            }
+        }
+    }
+
+    fun loadMoreComments() {
+        val state = _uiState.value
+        val nextToken = state.commentsNextPageToken
+        if (nextToken.isNullOrBlank() || state.isLoadingMoreComments || state.isLoadingComments) {
+            return
+        }
+
+        _uiState.update { it.copy(isLoadingMoreComments = true) }
+
+        viewModelScope.launch {
+            val result = withContext(ioDispatcher) {
+                mediaProvider.getComments(state.videoId, pageToken = nextToken)
+            }
+
+            result.onSuccess { pagedComments ->
+                _uiState.update { current ->
+                    // Prevent duplicate comments if API returns repeated items
+                    val existingIds = current.comments.map { it.id }.toSet()
+                    val newUniqueItems = pagedComments.items.filterNot { it.id in existingIds }
+                    current.copy(
+                        comments = current.comments + newUniqueItems,
+                        commentsNextPageToken = pagedComments.nextPageToken,
+                        isLoadingMoreComments = false
+                    )
+                }
+            }.onFailure {
+                _uiState.update { it.copy(isLoadingMoreComments = false) }
+            }
+        }
     }
 
     fun onPlayerEvent(event: PlayerEvent) {

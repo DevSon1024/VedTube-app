@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -527,6 +528,108 @@ fun VideoDetailsScreen(
                         }
                     }
 
+                    // Comments Preview Box
+                    item {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { viewModel.openComments() }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = "Comments",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        val count = uiState.totalCommentsCount ?: uiState.comments.size.toLong().takeIf { it > 0 }
+                                        if (count != null) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = FormatUtils.formatCompactNumber(count),
+                                                style = MaterialTheme.typography.labelMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    Icon(
+                                        imageVector = Icons.Default.ExpandMore,
+                                        contentDescription = "Open comments",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
+                                val firstComment = uiState.comments.firstOrNull()
+                                if (firstComment != null) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        if (!firstComment.authorAvatarUrl.isNullOrBlank()) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context)
+                                                    .data(firstComment.authorAvatarUrl)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = firstComment.authorName,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = firstComment.authorName.firstOrNull()?.uppercase() ?: "A",
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = firstComment.commentText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                } else if (uiState.isLoadingComments) {
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = "Loading comments...",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Related Videos Header
                     item {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -619,6 +722,237 @@ fun VideoDetailsScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
+
+        // Comments Bottom Sheet
+        if (uiState.isCommentsSheetVisible) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.dismissComments() },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Comments",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            val count = uiState.totalCommentsCount ?: uiState.comments.size.toLong().takeIf { it > 0 }
+                            if (count != null) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = FormatUtils.formatCompactNumber(count),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        IconButton(onClick = { viewModel.dismissComments() }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                    when {
+                        uiState.isLoadingComments && uiState.comments.isEmpty() -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(250.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+                        uiState.commentsError != null && uiState.comments.isEmpty() -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = uiState.commentsError ?: "Failed to load comments",
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(onClick = { viewModel.loadComments(uiState.videoId) }) {
+                                        Text("Retry")
+                                    }
+                                }
+                            }
+                        }
+                        uiState.comments.isEmpty() -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No comments available",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(420.dp),
+                                contentPadding = PaddingValues(vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                itemsIndexed(
+                                    items = uiState.comments,
+                                    key = { index, comment -> "comment_${comment.id}_$index" }
+                                ) { index, comment ->
+                                    if (index >= uiState.comments.size - 3 && !uiState.isLoadingMoreComments && uiState.commentsNextPageToken != null) {
+                                        LaunchedEffect(Unit) {
+                                            viewModel.loadMoreComments()
+                                        }
+                                    }
+                                    CommentItem(comment = comment)
+                                }
+
+                                if (uiState.isLoadingMoreComments) {
+                                    item {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(24.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentItem(
+    comment: com.devson.vedtube.domain.model.Comment,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        if (!comment.authorAvatarUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(comment.authorAvatarUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = comment.authorName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = comment.authorName.firstOrNull()?.uppercase() ?: "A",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = comment.authorName,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (!comment.publishDate.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "• ${comment.publishDate}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = comment.commentText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = 18.sp
+            )
+
+            if (comment.likeCount > 0) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ThumbUp,
+                        contentDescription = "Likes",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = FormatUtils.formatCompactNumber(comment.likeCount),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp
+                    )
                 }
             }
         }

@@ -23,6 +23,7 @@ class UserPreferencesDataStore @Inject constructor(
     private object PreferencesKeys {
         val THEME_CONFIG = stringPreferencesKey("theme_config")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
+        val SPONSORBLOCK_ENABLED = booleanPreferencesKey("sponsorblock_enabled")
     }
 
     val themeSettings: Flow<ThemeSettings> = dataStore.data
@@ -47,6 +48,18 @@ class UserPreferencesDataStore @Inject constructor(
             )
         }
 
+    val sponsorBlockEnabled: Flow<Boolean> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[PreferencesKeys.SPONSORBLOCK_ENABLED] ?: true
+        }
+
     suspend fun setThemeConfig(themeConfig: AppThemeConfig) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME_CONFIG] = themeConfig.name
@@ -56,6 +69,12 @@ class UserPreferencesDataStore @Inject constructor(
     suspend fun setDynamicColor(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.DYNAMIC_COLOR] = enabled
+        }
+    }
+
+    suspend fun setSponsorBlockEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SPONSORBLOCK_ENABLED] = enabled
         }
     }
 }

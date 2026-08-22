@@ -45,6 +45,11 @@ data class PlayerState(
     val isShuffleEnabled: Boolean = false,
     val availableQualities: List<VideoStream> = emptyList(),
     val selectedQuality: VideoStream? = null,
+    val availableSubtitles: List<com.devson.vedtube.domain.model.SubtitleTrack> = emptyList(),
+    val selectedSubtitle: com.devson.vedtube.domain.model.SubtitleTrack? = null,
+    val areSubtitlesEnabled: Boolean = false,
+    val sponsorBlockSegments: List<com.devson.vedtube.domain.model.SponsorSegment> = emptyList(),
+    val sponsorNotification: String? = null,
     val queue: List<Video> = emptyList(),
     val currentQueueIndex: Int = -1,
     val isFullscreen: Boolean = false

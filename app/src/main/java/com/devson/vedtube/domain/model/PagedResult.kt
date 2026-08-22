@@ -5,5 +5,6 @@ package com.devson.vedtube.domain.model
  */
 data class PagedResult<T>(
     val items: List<T> = emptyList(),
-    val nextPageToken: String? = null
+    val nextPageToken: String? = null,
+    val totalResults: Long? = null
 )

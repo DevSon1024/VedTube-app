@@ -102,9 +102,10 @@ class HomeViewModel @Inject constructor(
 
     private val _settingsAndInfra = combine(
         settingsRepository.themeSettings,
+        settingsRepository.sponsorBlockEnabled,
         _infraState
-    ) { theme, infra ->
-        Pair(theme, infra)
+    ) { theme, sponsorBlock, infra ->
+        Triple(theme, sponsorBlock, infra)
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -113,7 +114,8 @@ class HomeViewModel @Inject constructor(
         _feedState
     ) { settingsAndInfra, searchState, feedState ->
         val themeSettings = settingsAndInfra.first
-        val infra = settingsAndInfra.second
+        val sponsorBlockEnabled = settingsAndInfra.second
+        val infra = settingsAndInfra.third
         HomeUiState(
             searchQuery = searchState.query,
             isSearchActive = searchState.active,
@@ -123,6 +125,7 @@ class HomeViewModel @Inject constructor(
             isSearching = searchState.isSearching,
             error = feedState.error,
             themeSettings = themeSettings,
+            isSponsorBlockEnabled = sponsorBlockEnabled,
             isDatabaseReady = infra.first,
             isNetworkReady = infra.second,
             isPlayerReady = infra.third
@@ -278,6 +281,12 @@ class HomeViewModel @Inject constructor(
     fun toggleDynamicColor(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setDynamicColor(enabled)
+        }
+    }
+
+    fun toggleSponsorBlock(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSponsorBlockEnabled(enabled)
         }
     }
 

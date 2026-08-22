@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
     val themeSettings: Flow<ThemeSettings>
+    val sponsorBlockEnabled: Flow<Boolean>
     suspend fun setThemeConfig(themeConfig: AppThemeConfig)
     suspend fun setDynamicColor(enabled: Boolean)
+    suspend fun setSponsorBlockEnabled(enabled: Boolean)
 }

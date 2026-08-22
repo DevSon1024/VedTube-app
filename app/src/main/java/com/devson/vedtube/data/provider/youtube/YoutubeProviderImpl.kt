@@ -66,4 +66,18 @@ class YoutubeProviderImpl @Inject constructor(
                 Result.failure(YoutubeErrorMapper.map(e, playlistId))
             }
         }
+
+    override suspend fun getComments(
+        videoId: String,
+        pageToken: String?
+    ): Result<PagedResult<com.devson.vedtube.domain.model.Comment>> =
+        withContext(ioDispatcher) {
+            try {
+                val commentsInfo = extractorDataSource.extractComments(videoId, pageToken)
+                val pagedComments = YoutubeMapper.mapCommentsInfoToPagedResult(commentsInfo)
+                Result.success(pagedComments)
+            } catch (e: Throwable) {
+                Result.failure(YoutubeErrorMapper.map(e, videoId))
+            }
+        }
 }

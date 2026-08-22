@@ -13,4 +13,5 @@ interface YoutubeExtractorDataSource {
     suspend fun extractSearchInfo(query: String, pageToken: String? = null): SearchInfo
     suspend fun extractChannelInfo(channelIdOrHandle: String): ChannelInfo
     suspend fun extractPlaylistInfo(playlistId: String): PlaylistInfo
+    suspend fun extractComments(videoId: String, pageToken: String? = null): org.schabi.newpipe.extractor.comments.CommentsInfo
 }

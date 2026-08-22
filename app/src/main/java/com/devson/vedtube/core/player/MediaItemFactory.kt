@@ -48,6 +48,10 @@ class MediaItemFactory @Inject constructor(
         DefaultDataSource.Factory(context, okHttpFactory)
     }
 
+    private val defaultMediaSourceFactory: androidx.media3.exoplayer.source.DefaultMediaSourceFactory by lazy {
+        androidx.media3.exoplayer.source.DefaultMediaSourceFactory(okHttpDataSourceFactory)
+    }
+
     /**
      * Builds a [MediaSource] for the given [PlaybackSource], using either a specific [overrideQuality]
      * or selecting the best stream matching [preferences].
@@ -62,10 +66,8 @@ class MediaItemFactory @Inject constructor(
 
         // 1. Separate video-only + audio stream -> MergingMediaSource
         if (selectedVideoStream != null && selectedVideoStream.isVideoOnly && selectedAudioStream != null) {
-            val videoMediaSource = ProgressiveMediaSource.Factory(okHttpDataSourceFactory)
-                .createMediaSource(buildMediaItem(selectedVideoStream.url, playbackSource))
-            val audioMediaSource = ProgressiveMediaSource.Factory(okHttpDataSourceFactory)
-                .createMediaSource(buildMediaItem(selectedAudioStream.url, playbackSource))
+            val videoMediaSource = defaultMediaSourceFactory.createMediaSource(buildMediaItem(selectedVideoStream.url, playbackSource))
+            val audioMediaSource = defaultMediaSourceFactory.createMediaSource(buildMediaItem(selectedAudioStream.url, playbackSource))
 
             return MergingMediaSource(videoMediaSource, audioMediaSource)
         }
@@ -79,17 +81,7 @@ class MediaItemFactory @Inject constructor(
 
         val mediaItem = buildMediaItem(primaryStreamUrl, playbackSource)
 
-        return when {
-            primaryStreamUrl.contains(".m3u8") || primaryStreamUrl.contains("hls") -> {
-                HlsMediaSource.Factory(okHttpDataSourceFactory).createMediaSource(mediaItem)
-            }
-            primaryStreamUrl.contains(".mpd") || primaryStreamUrl.contains("dash") -> {
-                DashMediaSource.Factory(okHttpDataSourceFactory).createMediaSource(mediaItem)
-            }
-            else -> {
-                ProgressiveMediaSource.Factory(okHttpDataSourceFactory).createMediaSource(mediaItem)
-            }
-        }
+        return defaultMediaSourceFactory.createMediaSource(mediaItem)
     }
 
     private fun buildMediaItem(streamUrl: String, playbackSource: PlaybackSource): MediaItem {

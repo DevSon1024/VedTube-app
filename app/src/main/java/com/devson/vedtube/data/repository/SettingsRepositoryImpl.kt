@@ -22,6 +22,9 @@ class SettingsRepositoryImpl @Inject constructor(
     override val themeSettings: Flow<ThemeSettings>
         get() = userPreferencesDataStore.themeSettings.flowOn(ioDispatcher)
 
+    override val sponsorBlockEnabled: Flow<Boolean>
+        get() = userPreferencesDataStore.sponsorBlockEnabled.flowOn(ioDispatcher)
+
     override suspend fun setThemeConfig(themeConfig: AppThemeConfig) {
         withContext(ioDispatcher) {
             userPreferencesDataStore.setThemeConfig(themeConfig)
@@ -31,6 +34,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setDynamicColor(enabled: Boolean) {
         withContext(ioDispatcher) {
             userPreferencesDataStore.setDynamicColor(enabled)
+        }
+    }
+
+    override suspend fun setSponsorBlockEnabled(enabled: Boolean) {
+        withContext(ioDispatcher) {
+            userPreferencesDataStore.setSponsorBlockEnabled(enabled)
         }
     }
 }

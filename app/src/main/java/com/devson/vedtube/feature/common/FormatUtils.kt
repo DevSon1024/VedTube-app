@@ -38,4 +38,14 @@ object FormatUtils {
             else -> String.format(Locale.US, "%.1fM subscribers", count / 1_000_000.0).replace(".0M", "M")
         }
     }
+
+    fun formatCompactNumber(count: Long): String {
+        return when {
+            count < 0 -> "0"
+            count < 1_000 -> "$count"
+            count < 1_000_000 -> String.format(Locale.US, "%.1fK", count / 1_000.0).replace(".0K", "K")
+            count < 1_000_000_000 -> String.format(Locale.US, "%.1fM", count / 1_000_000.0).replace(".0M", "M")
+            else -> String.format(Locale.US, "%.1fB", count / 1_000_000_000.0).replace(".0B", "B")
+        }
+    }
 }

@@ -8,5 +8,6 @@ data class LibraryUiState(
     val historyList: List<WatchHistoryItem> = emptyList(),
     val subscriptionsList: List<ChannelSubscription> = emptyList(),
     val downloadsList: List<DownloadItem> = emptyList(),
+    val isSponsorBlockEnabled: Boolean = true,
     val isLoading: Boolean = false
 )

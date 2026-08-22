@@ -16,5 +16,12 @@ data class VideoDetailsUiState(
     val downloadItem: DownloadItem? = null,
     val isDownloadQualitySheetVisible: Boolean = false,
     val availableDownloadStreams: List<VideoStream> = emptyList(),
-    val isLoadingDownloadStreams: Boolean = false
+    val isLoadingDownloadStreams: Boolean = false,
+    val comments: List<com.devson.vedtube.domain.model.Comment> = emptyList(),
+    val commentsNextPageToken: String? = null,
+    val isLoadingComments: Boolean = false,
+    val isLoadingMoreComments: Boolean = false,
+    val commentsError: String? = null,
+    val totalCommentsCount: Long? = null,
+    val isCommentsSheetVisible: Boolean = false
 )

@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.SubtitlesOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -87,6 +89,7 @@ fun PlayerControls(
     var showSpeedSheet by remember { mutableStateOf(false) }
     var showQualitySheet by remember { mutableStateOf(false) }
     var showQueueSheet by remember { mutableStateOf(false) }
+    var showSubtitleSheet by remember { mutableStateOf(false) }
 
     // Auto-hide controls after 3.5 seconds if playing
     LaunchedEffect(controlsVisible, playerState.isPlaying) {
@@ -138,6 +141,43 @@ fun PlayerControls(
             }
         }
 
+        // Floating "Skipped Sponsor" pill
+        AnimatedVisibility(
+            visible = playerState.sponsorNotification != null,
+            enter = fadeIn() + androidx.compose.animation.slideInVertically(),
+            exit = fadeOut() + androidx.compose.animation.slideOutVertically(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clickable { onEvent(PlayerEvent.DismissSponsorNotification) }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = playerState.sponsorNotification ?: "",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
         // Overlay Controls Layer
         AnimatedVisibility(
             visible = controlsVisible,
@@ -155,6 +195,8 @@ fun PlayerControls(
                     onOpenSpeed = { showSpeedSheet = true },
                     onOpenQuality = { showQualitySheet = true },
                     onOpenQueue = { showQueueSheet = true },
+                    onOpenSubtitles = { showSubtitleSheet = true },
+                    onToggleSubtitles = { onEvent(PlayerEvent.ToggleSubtitles) },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
@@ -205,6 +247,20 @@ fun PlayerControls(
             )
         }
 
+        // Subtitle Selection Sheet
+        if (showSubtitleSheet) {
+            SubtitleSelectionSheet(
+                availableSubtitles = playerState.availableSubtitles,
+                selectedSubtitle = playerState.selectedSubtitle,
+                areSubtitlesEnabled = playerState.areSubtitlesEnabled,
+                onSubtitleSelected = { subtitle ->
+                    onEvent(PlayerEvent.SelectSubtitle(subtitle))
+                    showSubtitleSheet = false
+                },
+                onDismiss = { showSubtitleSheet = false }
+            )
+        }
+
         // Queue Management Sheet
         if (showQueueSheet) {
             QueueManagementSheet(
@@ -222,6 +278,8 @@ private fun PlayerTopBar(
     onOpenSpeed: () -> Unit,
     onOpenQuality: () -> Unit,
     onOpenQueue: () -> Unit,
+    onOpenSubtitles: () -> Unit,
+    onToggleSubtitles: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -246,6 +304,25 @@ private fun PlayerTopBar(
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Subtitles CC Toggle
+        if (playerState.availableSubtitles.isNotEmpty()) {
+            IconButton(
+                onClick = {
+                    if (playerState.availableSubtitles.size > 1) {
+                        onOpenSubtitles()
+                    } else {
+                        onToggleSubtitles()
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = if (playerState.areSubtitlesEnabled) Icons.Default.Subtitles else Icons.Default.SubtitlesOff,
+                    contentDescription = "Closed Captions",
+                    tint = if (playerState.areSubtitlesEnabled) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f)
                 )
             }
         }
@@ -696,6 +773,92 @@ private fun QueueManagementSheet(
                                     contentDescription = "Remove",
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SubtitleSelectionSheet(
+    availableSubtitles: List<com.devson.vedtube.domain.model.SubtitleTrack>,
+    selectedSubtitle: com.devson.vedtube.domain.model.SubtitleTrack?,
+    areSubtitlesEnabled: Boolean,
+    onSubtitleSelected: (com.devson.vedtube.domain.model.SubtitleTrack?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Subtitles / Captions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Option 1: Turn Off
+            val isOff = !areSubtitlesEnabled
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isOff) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                    .clickable { onSubtitleSelected(null) }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Off",
+                    color = if (isOff) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = if (isOff) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.weight(1f)
+                )
+                if (isOff) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Selected",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            // Available Subtitles
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                itemsIndexed(availableSubtitles) { _, sub ->
+                    val isSelected = areSubtitlesEnabled && (selectedSubtitle?.languageCode == sub.languageCode || (selectedSubtitle == null && sub == availableSubtitles.firstOrNull()))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent)
+                            .clickable { onSubtitleSelected(sub) }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = sub.languageName.ifBlank { sub.languageCode },
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (sub.isAutoGenerated) {
+                                Text(
+                                    text = "Auto-generated",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }

@@ -14,4 +14,5 @@ interface MediaProvider {
     suspend fun getVideoDetails(videoId: String): Result<VideoDetails>
     suspend fun getChannelDetails(channelIdOrHandle: String): Result<Channel>
     suspend fun getPlaylistDetails(playlistId: String): Result<Playlist>
+    suspend fun getComments(videoId: String, pageToken: String? = null): Result<PagedResult<com.devson.vedtube.domain.model.Comment>>
 }

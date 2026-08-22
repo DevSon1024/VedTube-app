@@ -21,18 +21,21 @@ class LibraryViewModel @Inject constructor(
     private val watchHistoryRepository: WatchHistoryRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val downloadRepository: DownloadRepository,
+    private val settingsRepository: com.devson.vedtube.domain.repository.SettingsRepository,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     val uiState: StateFlow<LibraryUiState> = combine(
         watchHistoryRepository.getRecentHistory(),
         subscriptionRepository.getAllSubscriptions(),
-        downloadRepository.getAllDownloads()
-    ) { history, subscriptions, downloads ->
+        downloadRepository.getAllDownloads(),
+        settingsRepository.sponsorBlockEnabled
+    ) { history, subscriptions, downloads, sponsorBlockEnabled ->
         LibraryUiState(
             historyList = history,
             subscriptionsList = subscriptions,
             downloadsList = downloads,
+            isSponsorBlockEnabled = sponsorBlockEnabled,
             isLoading = false
         )
     }.stateIn(
@@ -62,6 +65,12 @@ class LibraryViewModel @Inject constructor(
     fun deleteDownload(videoId: String) {
         viewModelScope.launch(ioDispatcher) {
             downloadRepository.deleteDownload(videoId)
+        }
+    }
+
+    fun toggleSponsorBlock(enabled: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            settingsRepository.setSponsorBlockEnabled(enabled)
         }
     }
 }
