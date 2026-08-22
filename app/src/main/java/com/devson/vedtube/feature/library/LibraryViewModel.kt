@@ -21,6 +21,7 @@ class LibraryViewModel @Inject constructor(
     private val watchHistoryRepository: WatchHistoryRepository,
     private val subscriptionRepository: SubscriptionRepository,
     private val downloadRepository: DownloadRepository,
+    private val playlistRepository: com.devson.vedtube.domain.repository.PlaylistRepository,
     private val settingsRepository: com.devson.vedtube.domain.repository.SettingsRepository,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
@@ -29,12 +30,14 @@ class LibraryViewModel @Inject constructor(
         watchHistoryRepository.getRecentHistory(),
         subscriptionRepository.getAllSubscriptions(),
         downloadRepository.getAllDownloads(),
+        playlistRepository.getAllPlaylists(),
         settingsRepository.sponsorBlockEnabled
-    ) { history, subscriptions, downloads, sponsorBlockEnabled ->
+    ) { history, subscriptions, downloads, playlists, sponsorBlockEnabled ->
         LibraryUiState(
             historyList = history,
             subscriptionsList = subscriptions,
             downloadsList = downloads,
+            playlists = playlists,
             isSponsorBlockEnabled = sponsorBlockEnabled,
             isLoading = false
         )
@@ -65,6 +68,18 @@ class LibraryViewModel @Inject constructor(
     fun deleteDownload(videoId: String) {
         viewModelScope.launch(ioDispatcher) {
             downloadRepository.deleteDownload(videoId)
+        }
+    }
+
+    fun createPlaylist(name: String) {
+        viewModelScope.launch(ioDispatcher) {
+            playlistRepository.createPlaylist(name)
+        }
+    }
+
+    fun deletePlaylist(playlistId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            playlistRepository.deletePlaylist(playlistId)
         }
     }
 

@@ -39,6 +39,7 @@ class VideoDetailsViewModel @Inject constructor(
     private val subscriptionRepository: SubscriptionRepository,
     private val watchHistoryRepository: WatchHistoryRepository,
     private val downloadRepository: DownloadRepository,
+    private val playlistRepository: com.devson.vedtube.domain.repository.PlaylistRepository,
     private val playbackResolver: PlaybackResolver,
     @Dispatcher(VedTubeDispatchers.IO) private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
@@ -49,12 +50,18 @@ class VideoDetailsViewModel @Inject constructor(
     val playerState: StateFlow<PlayerState> = vedPlayer.playerState
     private var subscriptionObserveJob: Job? = null
     private var downloadObserveJob: Job? = null
+    private var playlistObserveJob: Job? = null
 
     init {
         // Observe watch history progress for related video thumbnails
         watchHistoryRepository.getRecentHistory().onEach { historyList ->
             val progressMap = historyList.associate { it.videoId to it.progressFraction }
             _uiState.update { it.copy(watchProgressMap = progressMap) }
+        }.launchIn(viewModelScope)
+
+        // Observe playlists
+        playlistRepository.getAllPlaylists().onEach { playlists ->
+            _uiState.update { it.copy(playlists = playlists) }
         }.launchIn(viewModelScope)
 
         val initialVideoId = savedStateHandle.get<String>("videoId")
@@ -81,6 +88,7 @@ class VideoDetailsViewModel @Inject constructor(
         }
 
         observeDownloadStatus(videoId)
+        observePlaylistStatus(videoId)
 
         // Trigger playback on player if it's not already playing this exact video
         val currentPlayingVideo = vedPlayer.playerState.value.currentVideo
@@ -343,6 +351,56 @@ class VideoDetailsViewModel @Inject constructor(
                 }
             }.onFailure {
                 _uiState.update { it.copy(isLoadingMoreComments = false) }
+            }
+        }
+    }
+
+    private fun observePlaylistStatus(videoId: String) {
+        playlistObserveJob?.cancel()
+        playlistObserveJob = playlistRepository.getPlaylistIdsContainingVideo(videoId)
+            .onEach { containingIds ->
+                _uiState.update { it.copy(containingPlaylistIds = containingIds) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun openSaveToPlaylist() {
+        _uiState.update { it.copy(isSaveToPlaylistSheetVisible = true) }
+    }
+
+    fun dismissSaveToPlaylist() {
+        _uiState.update { it.copy(isSaveToPlaylistSheetVisible = false) }
+    }
+
+    fun createPlaylistAndAddVideo(name: String) {
+        val details = _uiState.value.details ?: return
+        val currentVideo = Video(
+            id = details.id,
+            title = details.title,
+            uploaderName = details.uploaderName,
+            thumbnailUrl = details.thumbnailUrl ?: "",
+            durationSeconds = details.durationSeconds
+        )
+        viewModelScope.launch {
+            val newPlaylistId = playlistRepository.createPlaylist(name)
+            playlistRepository.addVideoToPlaylist(newPlaylistId, currentVideo)
+        }
+    }
+
+    fun toggleVideoInPlaylist(playlistId: String, isCurrentlyContained: Boolean) {
+        val details = _uiState.value.details ?: return
+        val currentVideo = Video(
+            id = details.id,
+            title = details.title,
+            uploaderName = details.uploaderName,
+            thumbnailUrl = details.thumbnailUrl ?: "",
+            durationSeconds = details.durationSeconds
+        )
+        viewModelScope.launch {
+            if (isCurrentlyContained) {
+                playlistRepository.removeVideoFromPlaylist(playlistId, currentVideo.id)
+            } else {
+                playlistRepository.addVideoToPlaylist(playlistId, currentVideo)
             }
         }
     }

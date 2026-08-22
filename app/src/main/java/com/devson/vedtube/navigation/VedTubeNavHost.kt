@@ -11,6 +11,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.devson.vedtube.feature.home.HomeScreen
 import com.devson.vedtube.feature.home.HomeViewModel
+import com.devson.vedtube.feature.playlist.PlaylistDetailViewModel
+import com.devson.vedtube.feature.playlist.ui.PlaylistDetailScreen
+import com.devson.vedtube.feature.settings.SettingsViewModel
+import com.devson.vedtube.feature.settings.ui.SettingsScreen
 import com.devson.vedtube.feature.video.VideoDetailsViewModel
 import com.devson.vedtube.feature.video.ui.VideoDetailsScreen
 
@@ -32,10 +36,18 @@ fun VedTubeNavHost(
                 viewModel = homeViewModel,
                 isInPipMode = isInPipMode,
                 onVideoClick = { video ->
-                    if (navController.currentDestination?.route == Screen.Home.route) {
-                        navController.navigate(Screen.VideoDetails.createRoute(video.id)) {
-                            launchSingleTop = true
-                        }
+                    navController.navigate(Screen.VideoDetails.createRoute(video.id)) {
+                        launchSingleTop = true
+                    }
+                },
+                onPlaylistClick = { playlistId ->
+                    navController.navigate(Screen.PlaylistDetails.createRoute(playlistId)) {
+                        launchSingleTop = true
+                    }
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route) {
+                        launchSingleTop = true
                     }
                 }
             )
@@ -53,6 +65,42 @@ fun VedTubeNavHost(
             VideoDetailsScreen(
                 viewModel = videoDetailsViewModel,
                 isInPipMode = isInPipMode,
+                onBackClick = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Screen.PlaylistDetails.route,
+            arguments = listOf(
+                navArgument("playlistId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val playlistDetailViewModel: PlaylistDetailViewModel = hiltViewModel(backStackEntry)
+            PlaylistDetailScreen(
+                viewModel = playlistDetailViewModel,
+                onVideoClick = { video ->
+                    navController.navigate(Screen.VideoDetails.createRoute(video.id)) {
+                        launchSingleTop = true
+                    }
+                },
+                onBackClick = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                }
+            )
+        }
+
+        composable(route = Screen.Settings.route) { backStackEntry ->
+            val settingsViewModel: SettingsViewModel = hiltViewModel(backStackEntry)
+            SettingsScreen(
+                viewModel = settingsViewModel,
                 onBackClick = {
                     if (navController.previousBackStackEntry != null) {
                         navController.popBackStack()

@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbUp
@@ -462,6 +464,29 @@ fun VideoDetailsScreen(
                                         }
                                     }
                                 }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                // Save to Playlist Button
+                                val isSavedToAny = uiState.containingPlaylistIds.isNotEmpty()
+                                FilledTonalButton(
+                                    onClick = { viewModel.openSaveToPlaylist() },
+                                    shape = RoundedCornerShape(20.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSavedToAny) Icons.Default.PlaylistAddCheck else Icons.Default.PlaylistAdd,
+                                        contentDescription = "Save to Playlist",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (isSavedToAny) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isSavedToAny) "Saved" else "Save",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
                             }
                         }
                     }
@@ -860,6 +885,29 @@ fun VideoDetailsScreen(
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
+            }
+        }
+
+        // Save to Playlist Bottom Sheet
+        if (uiState.isSaveToPlaylistSheetVisible) {
+            val currentVideo = playerState.currentVideo ?: uiState.details?.let {
+                Video(
+                    id = it.id,
+                    title = it.title,
+                    uploaderName = it.uploaderName,
+                    thumbnailUrl = it.thumbnailUrl ?: "",
+                    durationSeconds = it.durationSeconds
+                )
+            }
+            if (currentVideo != null) {
+                com.devson.vedtube.feature.playlist.ui.SaveToPlaylistBottomSheet(
+                    video = currentVideo,
+                    playlists = uiState.playlists,
+                    containingPlaylistIds = uiState.containingPlaylistIds,
+                    onCreatePlaylist = { name -> viewModel.createPlaylistAndAddVideo(name) },
+                    onTogglePlaylist = { playlistId, isContained -> viewModel.toggleVideoInPlaylist(playlistId, isContained) },
+                    onDismiss = { viewModel.dismissSaveToPlaylist() }
+                )
             }
         }
     }

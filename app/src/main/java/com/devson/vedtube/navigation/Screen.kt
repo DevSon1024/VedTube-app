@@ -5,4 +5,8 @@ sealed class Screen(val route: String) {
     data object VideoDetails : Screen("video/{videoId}") {
         fun createRoute(videoId: String): String = "video/$videoId"
     }
+    data object PlaylistDetails : Screen("playlist/{playlistId}") {
+        fun createRoute(playlistId: String): String = "playlist/$playlistId"
+    }
+    data object Settings : Screen("settings")
 }

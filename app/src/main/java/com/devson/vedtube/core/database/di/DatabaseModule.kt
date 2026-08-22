@@ -2,8 +2,13 @@ package com.devson.vedtube.core.database.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.devson.vedtube.core.database.VedTubeDatabase
 import com.devson.vedtube.core.database.dao.AppInfoDao
+import com.devson.vedtube.core.database.dao.DownloadDao
+import com.devson.vedtube.core.database.dao.LocalPlaylistDao
+import com.devson.vedtube.core.database.dao.SearchHistoryDao
 import com.devson.vedtube.core.database.dao.SubscriptionDao
 import com.devson.vedtube.core.database.dao.WatchHistoryDao
 import dagger.Module
@@ -17,6 +22,47 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `search_history` (
+                    `query` TEXT NOT NULL,
+                    `timestamp` INTEGER NOT NULL,
+                    PRIMARY KEY(`query`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `local_playlists` (
+                    `playlistId` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `createdAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`playlistId`)
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `playlist_videos` (
+                    `playlistId` TEXT NOT NULL,
+                    `videoId` TEXT NOT NULL,
+                    `title` TEXT NOT NULL,
+                    `channelName` TEXT NOT NULL,
+                    `thumbnailUrl` TEXT NOT NULL,
+                    `durationSeconds` INTEGER NOT NULL,
+                    `addedAt` INTEGER NOT NULL,
+                    PRIMARY KEY(`playlistId`, `videoId`),
+                    FOREIGN KEY(`playlistId`) REFERENCES `local_playlists`(`playlistId`) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_videos_playlistId` ON `playlist_videos` (`playlistId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_videos_videoId` ON `playlist_videos` (`videoId`)")
+        }
+    }
+
     @Provides
     @Singleton
     fun providesVedTubeDatabase(
@@ -27,6 +73,7 @@ object DatabaseModule {
             VedTubeDatabase::class.java,
             "vedtube.db"
         )
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -59,7 +106,23 @@ object DatabaseModule {
     @Singleton
     fun providesDownloadDao(
         database: VedTubeDatabase
-    ): com.devson.vedtube.core.database.dao.DownloadDao {
+    ): DownloadDao {
         return database.downloadDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providesSearchHistoryDao(
+        database: VedTubeDatabase
+    ): SearchHistoryDao {
+        return database.searchHistoryDao()
+    }
+
+    @Provides
+    @Singleton
+    fun providesLocalPlaylistDao(
+        database: VedTubeDatabase
+    ): LocalPlaylistDao {
+        return database.localPlaylistDao()
     }
 }

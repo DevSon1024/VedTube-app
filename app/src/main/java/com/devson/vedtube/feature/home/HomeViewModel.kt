@@ -47,6 +47,7 @@ private data class FeedState(
 class HomeViewModel @Inject constructor(
     private val mediaProvider: MediaProvider,
     private val settingsRepository: SettingsRepository,
+    private val searchHistoryRepository: com.devson.vedtube.domain.repository.SearchHistoryRepository,
     private val appInfoDao: AppInfoDao,
     private val okHttpClient: OkHttpClient,
     val vedPlayer: VedPlayer,
@@ -111,8 +112,9 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         _settingsAndInfra,
         _searchState,
-        _feedState
-    ) { settingsAndInfra, searchState, feedState ->
+        _feedState,
+        searchHistoryRepository.getRecentQueries()
+    ) { settingsAndInfra, searchState, feedState, recentSearches ->
         val themeSettings = settingsAndInfra.first
         val sponsorBlockEnabled = settingsAndInfra.second
         val infra = settingsAndInfra.third
@@ -126,6 +128,7 @@ class HomeViewModel @Inject constructor(
             error = feedState.error,
             themeSettings = themeSettings,
             isSponsorBlockEnabled = sponsorBlockEnabled,
+            recentSearches = recentSearches,
             isDatabaseReady = infra.first,
             isNetworkReady = infra.second,
             isPlayerReady = infra.third
@@ -214,10 +217,25 @@ class HomeViewModel @Inject constructor(
 
     fun onSearchSubmitted(query: String) {
         searchJob?.cancel()
-        if (query.isNotBlank()) {
+        val trimmed = query.trim()
+        if (trimmed.isNotBlank()) {
+            _searchQuery.value = trimmed
             viewModelScope.launch {
-                executeSearch(query)
+                searchHistoryRepository.saveQuery(trimmed)
+                executeSearch(trimmed)
             }
+        }
+    }
+
+    fun deleteSearchQuery(query: String) {
+        viewModelScope.launch {
+            searchHistoryRepository.deleteQuery(query)
+        }
+    }
+
+    fun clearSearchHistory() {
+        viewModelScope.launch {
+            searchHistoryRepository.clearHistory()
         }
     }
 

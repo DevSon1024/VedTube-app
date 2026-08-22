@@ -45,4 +45,22 @@ abstract class RepositoryModule {
     abstract fun bindSponsorBlockRepository(
         sponsorBlockRepositoryImpl: com.devson.vedtube.data.repository.SponsorBlockRepositoryImpl
     ): com.devson.vedtube.domain.repository.SponsorBlockRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSearchHistoryRepository(
+        searchHistoryRepositoryImpl: com.devson.vedtube.data.repository.SearchHistoryRepositoryImpl
+    ): com.devson.vedtube.domain.repository.SearchHistoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPlaylistRepository(
+        playlistRepositoryImpl: com.devson.vedtube.data.repository.PlaylistRepositoryImpl
+    ): com.devson.vedtube.domain.repository.PlaylistRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDataManagementRepository(
+        dataManagementRepositoryImpl: com.devson.vedtube.data.repository.DataManagementRepositoryImpl
+    ): com.devson.vedtube.domain.repository.DataManagementRepository
 }

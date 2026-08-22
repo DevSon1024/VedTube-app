@@ -30,10 +30,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -84,6 +88,8 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onVideoClick: (Video) -> Unit,
     isInPipMode: Boolean = false,
+    onSettingsClick: () -> Unit = {},
+    onPlaylistClick: (String) -> Unit = {},
     libraryViewModel: LibraryViewModel = hiltViewModel(),
     modifier: Modifier = Modifier
 ) {
@@ -127,7 +133,11 @@ fun HomeScreen(
                     onSearch = { viewModel.onSearchSubmitted(it) },
                     active = uiState.isSearchActive,
                     onActiveChange = { viewModel.setSearchActive(it) },
-                    onClearQuery = { viewModel.clearSearch() }
+                    onClearQuery = { viewModel.clearSearch() },
+                    recentSearches = uiState.recentSearches,
+                    onDeleteSearchQuery = { viewModel.deleteSearchQuery(it) },
+                    onClearSearchHistory = { viewModel.clearSearchHistory() },
+                    onSettingsClick = onSettingsClick
                 )
             }
         },
@@ -245,7 +255,9 @@ fun HomeScreen(
             } else {
                 LibraryScreen(
                     viewModel = libraryViewModel,
-                    onVideoClick = onVideoClick
+                    onVideoClick = onVideoClick,
+                    onPlaylistClick = onPlaylistClick,
+                    onSettingsClick = onSettingsClick
                 )
             }
         }
@@ -260,12 +272,17 @@ fun HomeSearchBar(
     active: Boolean,
     onActiveChange: (Boolean) -> Unit,
     onClearQuery: () -> Unit,
+    recentSearches: List<com.devson.vedtube.domain.model.SearchHistoryItem> = emptyList(),
+    onDeleteSearchQuery: (String) -> Unit = {},
+    onClearSearchHistory: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         SearchBar(
             query = query,
@@ -298,19 +315,29 @@ fun HomeSearchBar(
                 }
             },
             trailingIcon = {
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = onClearQuery) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Clear text"
-                        )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = onClearQuery) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear text"
+                            )
+                        }
+                    } else if (!active) {
+                        IconButton(onClick = onSettingsClick) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Live Search Suggestions / Instant Feedback
             if (query.isNotBlank()) {
+                // Live query item
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp)
@@ -337,6 +364,85 @@ fun HomeSearchBar(
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
+                        }
+                    }
+                }
+            } else if (recentSearches.isNotEmpty()) {
+                // Search History List
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Recent Searches",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(onClick = onClearSearchHistory) {
+                                Icon(
+                                    imageVector = Icons.Default.DeleteSweep,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Clear all")
+                            }
+                        }
+                    }
+
+                    items(
+                        items = recentSearches,
+                        key = { "search_${it.query}" }
+                    ) { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onQueryChange(item.query)
+                                    onSearch(item.query)
+                                    onActiveChange(false)
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.History,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = item.query,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            IconButton(
+                                onClick = { onDeleteSearchQuery(item.query) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Delete search query",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

@@ -14,6 +14,7 @@ data class HomeUiState(
     val error: AppError? = null,
     val themeSettings: ThemeSettings = ThemeSettings(),
     val isSponsorBlockEnabled: Boolean = true,
+    val recentSearches: List<com.devson.vedtube.domain.model.SearchHistoryItem> = emptyList(),
     val isDatabaseReady: Boolean = true,
     val isNetworkReady: Boolean = true,
     val isPlayerReady: Boolean = true

@@ -23,5 +23,8 @@ data class VideoDetailsUiState(
     val isLoadingMoreComments: Boolean = false,
     val commentsError: String? = null,
     val totalCommentsCount: Long? = null,
-    val isCommentsSheetVisible: Boolean = false
+    val isCommentsSheetVisible: Boolean = false,
+    val isSaveToPlaylistSheetVisible: Boolean = false,
+    val playlists: List<com.devson.vedtube.domain.model.LocalPlaylist> = emptyList(),
+    val containingPlaylistIds: List<String> = emptyList()
 )
